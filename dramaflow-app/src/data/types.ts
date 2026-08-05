@@ -86,6 +86,37 @@ export interface SynthesisConfig {
   };
 }
 
+// AI 模型专业用途分类
+export type AIModelPurpose =
+  | 'script'
+  | 'polish'
+  | 'storyboard'
+  | 'character'
+  | 'suggestion'
+  | 'image'
+  | 'dubbing'
+  | 'video'
+  | 'generic';
+
+export interface AIModelConfig {
+  id: string;
+  name: string;
+  provider: 'openai' | 'anthropic' | 'custom' | 'mock';
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  enabled: boolean;
+  purposes: AIModelPurpose[];
+  temperature?: number;
+  maxTokens?: number;
+}
+
+export interface AIModelSettings {
+  models: AIModelConfig[];
+  // 每个用途对应的默认模型 ID
+  defaults: Partial<Record<AIModelPurpose, string>>;
+}
+
 export interface AppState {
   activeView: 'overview' | 'workflow';
   activeProjectId: string | null;

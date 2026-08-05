@@ -1,2 +1,4 @@
-export { getAIService } from './ai';
+export { getAIService, getAIServiceForPurpose } from './ai';
 export type { AIService, AIGenerateScriptParams, AIGenerateShotsParams, AIDubbingParams, AIGenerateCharacterParams, AIGenerateSuggestionParams, AIProvider, AIServiceConfig } from './ai';
+export { loadModelSettings, saveModelSettings, createEmptyModel, getModelForPurpose, PURPOSE_LABELS, PURPOSE_DESCRIPTIONS, DEFAULT_MODELS } from './ai-models';
+export type { AIModelConfig, AIModelPurpose, AIModelSettings } from '../data/types';

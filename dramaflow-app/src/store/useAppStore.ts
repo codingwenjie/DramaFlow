@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type ViewMode = 'overview' | 'workflow';
+export type ViewMode = 'overview' | 'workflow' | 'ai-settings';
 export type WorkflowTab = 'script' | 'storyboard' | 'characters' | 'dubbing' | 'synthesis';
 
 interface AppState {

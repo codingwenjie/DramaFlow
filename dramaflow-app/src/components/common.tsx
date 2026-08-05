@@ -7,6 +7,7 @@ interface ButtonProps {
   size?: 'sm' | 'md';
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
   style?: React.CSSProperties;
+  disabled?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -15,6 +16,7 @@ export const Button: React.FC<ButtonProps> = ({
   size = 'md',
   onClick,
   style,
+  disabled = false,
 }) => {
   const baseStyle: React.CSSProperties = {
     display: 'inline-flex',
@@ -22,12 +24,13 @@ export const Button: React.FC<ButtonProps> = ({
     justifyContent: 'center',
     border: 'none',
     borderRadius: 4,
-    cursor: 'pointer',
+    cursor: disabled ? 'default' : 'pointer',
     fontFamily: 'Inter, sans-serif',
     fontWeight: 500,
     fontSize: size === 'sm' ? 11 : 13,
     padding: size === 'sm' ? '4px 10px' : '6px 14px',
     transition: 'opacity 0.15s',
+    opacity: disabled ? 0.6 : 1,
   };
 
   const variantStyle: React.CSSProperties =
@@ -41,6 +44,7 @@ export const Button: React.FC<ButtonProps> = ({
     <button
       style={{ ...baseStyle, ...variantStyle, ...style }}
       onClick={onClick}
+      disabled={disabled}
     >
       {children}
     </button>

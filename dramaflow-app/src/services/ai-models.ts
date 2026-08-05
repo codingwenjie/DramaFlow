@@ -1,0 +1,155 @@
+import { AIModelConfig, AIModelPurpose, AIModelSettings } from '../data/types';
+import { generateId } from '../data/storage';
+
+const STORAGE_KEY = 'dramaflow-ai-models';
+
+export const PURPOSE_LABELS: Record<AIModelPurpose, string> = {
+  script: '剧本生成',
+  polish: '剧本润色',
+  storyboard: '分镜生成',
+  character: '角色人设',
+  suggestion: 'AI 建议',
+  image: '文生图',
+  dubbing: '配音生成',
+  video: '视频生成',
+  generic: '通用对话',
+};
+
+export const PURPOSE_DESCRIPTIONS: Record<AIModelPurpose, string> = {
+  script: '根据提示词生成短剧剧本内容',
+  polish: '优化、改写、润色现有剧本',
+  storyboard: '根据剧本内容生成分镜描述',
+  character: '根据角色信息生成人设描述',
+  suggestion: '针对剧本、角色、分镜给出建议',
+  image: '根据文本描述生成图片素材',
+  dubbing: '根据台词生成配音音频',
+  video: '根据素材生成视频片段',
+  generic: '通用多轮对话',
+};
+
+export const DEFAULT_MODELS: AIModelConfig[] = [
+  {
+    id: 'mock-default',
+    name: '模拟 AI（离线）',
+    provider: 'mock',
+    baseUrl: '',
+    apiKey: '',
+    model: 'mock',
+    enabled: true,
+    purposes: ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic'],
+  },
+  {
+    id: 'openai-gpt4o',
+    name: 'OpenAI GPT-4o',
+    provider: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: '',
+    model: 'gpt-4o',
+    enabled: false,
+    purposes: ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic'],
+  },
+  {
+    id: 'openai-dalle3',
+    name: 'OpenAI DALL·E 3',
+    provider: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    apiKey: '',
+    model: 'dall-e-3',
+    enabled: false,
+    purposes: ['image'],
+  },
+  {
+    id: 'custom-tts',
+    name: '自定义 TTS',
+    provider: 'custom',
+    baseUrl: '',
+    apiKey: '',
+    model: '',
+    enabled: false,
+    purposes: ['dubbing'],
+  },
+  {
+    id: 'custom-video',
+    name: '自定义视频模型',
+    provider: 'custom',
+    baseUrl: '',
+    apiKey: '',
+    model: '',
+    enabled: false,
+    purposes: ['video'],
+  },
+];
+
+export function getDefaultSettings(): AIModelSettings {
+  return {
+    models: DEFAULT_MODELS,
+    defaults: {
+      script: 'mock-default',
+      polish: 'mock-default',
+      storyboard: 'mock-default',
+      character: 'mock-default',
+      suggestion: 'mock-default',
+      image: 'openai-dalle3',
+      dubbing: 'custom-tts',
+      video: 'custom-video',
+      generic: 'mock-default',
+    },
+  };
+}
+
+export function loadModelSettings(): AIModelSettings {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) {
+      const defaults = getDefaultSettings();
+      saveModelSettings(defaults);
+      return defaults;
+    }
+    const parsed = JSON.parse(data) as AIModelSettings;
+    // 合并默认模型，确保新用途有对应模型
+    if (!parsed.models || parsed.models.length === 0) {
+      parsed.models = DEFAULT_MODELS;
+    }
+    if (!parsed.defaults) {
+      parsed.defaults = getDefaultSettings().defaults;
+    }
+    return parsed;
+  } catch (e) {
+    console.error('Failed to load AI model settings:', e);
+    return getDefaultSettings();
+  }
+}
+
+export function saveModelSettings(settings: AIModelSettings): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  } catch (e) {
+    console.error('Failed to save AI model settings:', e);
+  }
+}
+
+export function createEmptyModel(purposes: AIModelPurpose[] = ['generic']): AIModelConfig {
+  return {
+    id: generateId(),
+    name: '新模型',
+    provider: 'custom',
+    baseUrl: '',
+    apiKey: '',
+    model: '',
+    enabled: true,
+    purposes,
+  };
+}
+
+export function getModelForPurpose(
+  settings: AIModelSettings,
+  purpose: AIModelPurpose
+): AIModelConfig | undefined {
+  const defaultId = settings.defaults[purpose];
+  if (defaultId) {
+    const model = settings.models.find((m) => m.id === defaultId && m.enabled);
+    if (model) return model;
+  }
+  // 回退：找支持该用途且启用的第一个模型
+  return settings.models.find((m) => m.enabled && m.purposes.includes(purpose));
+}

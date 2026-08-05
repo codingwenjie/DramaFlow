@@ -10,12 +10,13 @@ import Storyboard from './components/Storyboard';
 import CharacterManager from './components/CharacterManager';
 import DubbingPanel from './components/DubbingPanel';
 import SynthesisPanel from './components/SynthesisPanel';
+import AIModelSettings from './components/AIModelSettings';
 import ErrorBoundary from './components/ErrorBoundary';
 import { C } from './constants';
 
 export { C };
 
-export type ViewMode = 'overview' | 'workflow';
+export type ViewMode = 'overview' | 'workflow' | 'ai-settings';
 export type WorkflowTab = 'script' | 'storyboard' | 'characters' | 'dubbing' | 'synthesis';
 
 const App: React.FC = () => {
@@ -60,7 +61,7 @@ const App: React.FC = () => {
           <TabNav />
         )}
 
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        <div style={{ flex: 1, overflow: 'hidden' }}>
           <ErrorBoundary>
             {activeView === 'overview' ? (
               <ProjectOverview
@@ -68,6 +69,8 @@ const App: React.FC = () => {
                 onSelectProject={handleSelectProject}
                 onNewProject={handleNewProject}
               />
+            ) : activeView === 'ai-settings' ? (
+              <AIModelSettings />
             ) : (
               renderWorkflowContent()
             )}

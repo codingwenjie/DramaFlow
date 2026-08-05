@@ -4,6 +4,7 @@ import { Button, Tag, SectionLabel, Divider } from './common';
 import { useAppStore } from '../store/useAppStore';
 import { loadModuleData, saveModuleData } from '../data/storage';
 import { Character } from '../data/types';
+import { getAIServiceForPurpose } from '../services';
 
 const DEFAULT_CHARACTERS: Character[] = [
   {
@@ -48,6 +49,47 @@ const CharacterManager: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<SubTab>('profile');
   const [selectedVoice, setSelectedVoice] = useState<string>('男声-沉稳磁性');
   const [selectedStyle, setSelectedStyle] = useState<string>('写实');
+  const [generating, setGenerating] = useState(false);
+
+  const handleGenerateDescription = async () => {
+    if (!selected) return;
+    setGenerating(true);
+    try {
+      const service = getAIServiceForPurpose('character');
+      const result = await service.generateCharacter({
+        name: selected.name,
+        role: selected.role,
+      });
+      setCharacters((prev) =>
+        prev.map((c) => (c.id === selected.id ? { ...c, description: result } : c))
+      );
+    } catch (error) {
+      console.error('角色生成失败:', error);
+      alert(error instanceof Error ? error.message : '角色生成失败');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleGenerateSuggestions = async () => {
+    if (!selected) return;
+    setGenerating(true);
+    try {
+      const service = getAIServiceForPurpose('suggestion');
+      const result = await service.generateSuggestions({
+        context: `${selected.name}，${selected.role}。${selected.description}`,
+        type: 'character',
+      });
+      setCharacters((prev) =>
+        prev.map((c) => (c.id === selected.id ? { ...c, suggestions: result } : c))
+      );
+    } catch (error) {
+      console.error('建议生成失败:', error);
+      alert(error instanceof Error ? error.message : '建议生成失败');
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   useEffect(() => {
     if (!activeProjectId) return;
@@ -320,6 +362,15 @@ const CharacterManager: React.FC = () => {
             </div>
           ))}
         </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleGenerateSuggestions}
+          disabled={generating}
+          style={{ marginTop: 8 }}
+        >
+          {generating ? '生成中…' : '重新生成建议'}
+        </Button>
       </div>
 
       <div style={{ marginTop: 16 }}>
@@ -524,9 +575,12 @@ const CharacterManager: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ marginTop: 20 }}>
-        <Button variant="primary" size="md">
-          生成新形象
+      <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
+        <Button variant="primary" size="md" onClick={handleGenerateDescription} disabled={generating}>
+          {generating ? '生成中…' : 'AI 生成人设'}
+        </Button>
+        <Button variant="secondary" size="md" onClick={handleGenerateSuggestions} disabled={generating}>
+          {generating ? '生成中…' : '生成建议'}
         </Button>
       </div>
     </div>

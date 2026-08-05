@@ -3,6 +3,7 @@ import { C } from '../constants';
 import { useAppStore } from '../store/useAppStore';
 import { loadModuleData, saveModuleData, generateModuleId } from '../data/storage';
 import { Episode } from '../data/types';
+import { getAIServiceForPurpose } from '../services';
 
 const colors = {
   ...C,
@@ -132,11 +133,39 @@ const ScriptEditor: React.FC = () => {
   const targetWords = 2400;
   const progressPercent = Math.round((totalWords / targetWords) * 100);
 
-  const handleAiGenerate = () => {
+  const handleAiGenerate = async () => {
+    if (!aiInput.trim()) return;
     setAiGenerating(true);
-    setTimeout(() => {
+    try {
+      const service = getAIServiceForPurpose('script');
+      const result = await service.generateScript({
+        prompt: aiInput,
+        context: scriptContent,
+        genre: selectedScene?.type,
+      });
+      setScriptContent((prev) => (prev ? prev + '\n\n' + result : result));
+      setAiInput('');
+    } catch (error) {
+      console.error('AI 生成失败:', error);
+      alert(error instanceof Error ? error.message : 'AI 生成失败');
+    } finally {
       setAiGenerating(false);
-    }, 2000);
+    }
+  };
+
+  const handlePolish = async () => {
+    if (!scriptContent.trim()) return;
+    setAiGenerating(true);
+    try {
+      const service = getAIServiceForPurpose('polish');
+      const result = await service.polishScript(scriptContent);
+      setScriptContent(result);
+    } catch (error) {
+      console.error('AI 润色失败:', error);
+      alert(error instanceof Error ? error.message : 'AI 润色失败');
+    } finally {
+      setAiGenerating(false);
+    }
   };
 
   const handleQuickAction = (action: string) => {
@@ -461,6 +490,8 @@ const ScriptEditor: React.FC = () => {
               格式化
             </button>
             <button
+              onClick={handlePolish}
+              disabled={aiGenerating}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -472,8 +503,9 @@ const ScriptEditor: React.FC = () => {
                 padding: '4px 10px',
                 fontSize: 11,
                 fontWeight: 500,
-                cursor: 'pointer',
+                cursor: aiGenerating ? 'default' : 'pointer',
                 fontFamily: 'Inter, sans-serif',
+                opacity: aiGenerating ? 0.7 : 1,
               }}
             >
               AI 润色

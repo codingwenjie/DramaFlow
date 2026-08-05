@@ -4,6 +4,7 @@ import { Button, StatusBadge, SectionLabel, Divider, ProgressBar } from './commo
 import { useAppStore } from '../store/useAppStore';
 import { loadModuleData, saveModuleData } from '../data/storage';
 import { DubbingLine } from '../data/types';
+import { getAIServiceForPurpose } from '../services';
 
 const DEFAULT_LINES: DubbingLine[] = [
   { id: 'd001', projectId: '', scene: 1, character: '林晓', characterColor: '#E69500', text: '天哪，对不起！对不起！我真的不是故意的……', status: 'done', duration: '3.2s', emotion: 'panic', speed: 1.0, volume: 80 },
@@ -83,12 +84,37 @@ const DubbingPanel: React.FC = () => {
     );
   };
 
-  const handleGenerate = (id: string) => {
+  const handleGenerate = async (id: string) => {
+    const line = lines.find((l) => l.id === id);
+    if (!line) return;
     setLines((prev) =>
       prev.map((l) =>
         l.id === id ? { ...l, status: 'generating' } : l,
       ),
     );
+    try {
+      const service = getAIServiceForPurpose('dubbing');
+      await service.generateDubbing({
+        text: line.text,
+        character: line.character,
+        emotion: line.emotion,
+        speed: line.speed,
+        volume: line.volume,
+      });
+      setLines((prev) =>
+        prev.map((l) =>
+          l.id === id ? { ...l, status: 'done', duration: '3.0s' } : l,
+        ),
+      );
+    } catch (error) {
+      console.error('配音生成失败:', error);
+      alert(error instanceof Error ? error.message : '配音生成失败');
+      setLines((prev) =>
+        prev.map((l) =>
+          l.id === id ? { ...l, status: 'pending' } : l,
+        ),
+      );
+    }
   };
 
   const handleBatchGenerate = () => {

@@ -4,6 +4,7 @@ import { Button, Tag } from './common';
 import { useAppStore } from '../store/useAppStore';
 import { loadModuleData, saveModuleData } from '../data/storage';
 import { Shot } from '../data/types';
+import { getAIServiceForPurpose } from '../services';
 
 const DEFAULT_SHOTS: Shot[] = [
   {
@@ -61,6 +62,30 @@ const Storyboard: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
   const [editDescriptions, setEditDescriptions] = useState<Record<string, string>>({});
+  const [generatingId, setGeneratingId] = useState<string | null>(null);
+
+  const handleGenerateShot = async (shotId: string) => {
+    const shot = shots.find((s) => s.id === shotId);
+    if (!shot) return;
+    setGeneratingId(shotId);
+    try {
+      const service = getAIServiceForPurpose('storyboard');
+      const result = await service.generateShots({
+        scriptContent: shot.desc,
+        scene: `场景 ${shot.scene}`,
+        style: `${shot.type} / ${shot.angle}`,
+      });
+      const newDesc = result[0] || shot.desc;
+      setShots((prev) =>
+        prev.map((s) => (s.id === shotId ? { ...s, desc: newDesc, status: 'done' } : s))
+      );
+    } catch (error) {
+      console.error('分镜生成失败:', error);
+      alert(error instanceof Error ? error.message : '分镜生成失败');
+    } finally {
+      setGeneratingId(null);
+    }
+  };
 
   useEffect(() => {
     if (!activeProjectId) return;
@@ -311,15 +336,17 @@ const Storyboard: React.FC = () => {
                 >
                   {shot.duration}
                 </span>
-                {shot.status === 'pending' && (
+                {(shot.status === 'pending' || shot.status === 'generating') && (
                   <Button
                     variant="secondary"
                     size="sm"
                     onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
+                      handleGenerateShot(shot.id);
                     }}
+                    disabled={generatingId === shot.id}
                   >
-                    生成分镜
+                    {generatingId === shot.id ? '生成中…' : '生成分镜'}
                   </Button>
                 )}
               </div>
@@ -409,15 +436,17 @@ const Storyboard: React.FC = () => {
               >
                 {shot.duration}
               </span>
-              {shot.status === 'pending' && (
+              {(shot.status === 'pending' || shot.status === 'generating') && (
                 <Button
                   variant="secondary"
                   size="sm"
                   onClick={(e: React.MouseEvent) => {
                     e.stopPropagation();
+                    handleGenerateShot(shot.id);
                   }}
+                  disabled={generatingId === shot.id}
                 >
-                  生成分镜
+                  {generatingId === shot.id ? '生成中…' : '生成分镜'}
                 </Button>
               )}
             </div>
@@ -639,9 +668,10 @@ const Storyboard: React.FC = () => {
             <Button
               variant="secondary"
               style={{ width: '100%' }}
-              onClick={() => {}}
+              onClick={() => selectedShot && handleGenerateShot(selectedShot.id)}
+              disabled={!selectedShot || generatingId === selectedShot?.id}
             >
-              重新生成
+              {generatingId === selectedShot?.id ? '生成中…' : '重新生成'}
             </Button>
           </div>
         </div>

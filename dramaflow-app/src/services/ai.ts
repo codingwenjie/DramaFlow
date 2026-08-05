@@ -1,3 +1,8 @@
+import { AIModelPurpose, AIModelSettings } from '../data/types';
+import { createMockService } from './ai-mock';
+import { createOpenAIService } from './ai-openai';
+import { getModelForPurpose, loadModelSettings } from './ai-models';
+
 export type AIProvider = 'mock' | 'openai' | 'custom';
 
 export interface AIServiceConfig {
@@ -49,15 +54,36 @@ export interface AIService {
   polishScript(content: string, instruction?: string): Promise<string>;
 }
 
-// 获取当前 AI 服务实例
-export function getAIService(): AIService {
-  // 从环境变量读取配置，默认使用 mock
-  const provider = (import.meta.env.VITE_AI_PROVIDER || 'mock') as AIProvider;
-  if (provider === 'openai' && import.meta.env.VITE_OPENAI_API_KEY) {
-    // 返回 OpenAI 实现（待后续接入）
-    throw new Error('OpenAI provider not yet implemented');
+export function createAIService(config: AIServiceConfig): AIService {
+  if (config.provider === 'openai') {
+    throw new Error('Legacy getAIService(config) is not supported; use getAIServiceForPurpose instead');
   }
-  // 默认返回 mock 服务
-  const { createMockService } = require('./ai-mock');
   return createMockService();
+}
+
+// 根据用途获取对应的 AI 服务实例
+export function getAIServiceForPurpose(
+  purpose: AIModelPurpose,
+  settings: AIModelSettings = loadModelSettings()
+): AIService {
+  const model = getModelForPurpose(settings, purpose);
+  if (!model) {
+    throw new Error(`没有可用的 AI 模型用于「${purpose}」，请在 AI 模型配置中启用至少一个支持该用途的模型。`);
+  }
+
+  if (model.provider === 'mock') {
+    return createMockService();
+  }
+
+  if (model.provider === 'openai') {
+    return createOpenAIService(model, purpose);
+  }
+
+  // custom 暂 fallback 到 mock
+  return createMockService();
+}
+
+// 兼容旧调用：默认返回通用/剧本用途的服务
+export function getAIService(): AIService {
+  return getAIServiceForPurpose('script');
 }
