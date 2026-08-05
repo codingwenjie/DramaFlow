@@ -1,0 +1,80 @@
+{
+  "root": {
+    "nodeId": "gen-project-shell",
+    "kind": "project-shell",
+    "pageIds": ["page-dashboard", "page-script-factory", "page-character-library", "page-storyboard", "page-video-generation", "page-post-production"],
+    "output": "partials/project-shell.html",
+    "sharedRegions": ["sidebar", "topbar", "root-frame", "brand-css"],
+    "privateRegions": [],
+    "mutableSlots": ["pageTitle", "breadcrumb", "mainContent"],
+    "status": "planned",
+    "children": [
+      {
+        "nodeId": "gen-page-dashboard",
+        "kind": "page-leaf",
+        "pageIds": ["page-dashboard"],
+        "output": "pages/dashboard.html",
+        "sharedRegions": [],
+        "privateRegions": ["stats-cards", "project-grid", "quick-actions"],
+        "mutableSlots": ["pageTitle=仪表盘", "breadcrumb=仪表盘", "mainContent"],
+        "status": "planned",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-script-factory",
+        "kind": "page-leaf",
+        "pageIds": ["page-script-factory"],
+        "output": "pages/script-factory.html",
+        "sharedRegions": [],
+        "privateRegions": ["mode-tabs", "input-panel", "config-panel", "episode-preview"],
+        "mutableSlots": ["pageTitle=剧本工厂", "breadcrumb=项目名 > 剧本工厂", "mainContent"],
+        "status": "planned",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-character-library",
+        "kind": "page-leaf",
+        "pageIds": ["page-character-library"],
+        "output": "pages/character-library.html",
+        "sharedRegions": [],
+        "privateRegions": ["character-cards", "detail-panel", "view-tabs", "expression-grid", "attribute-editor"],
+        "mutableSlots": ["pageTitle=角色资产管理", "breadcrumb=项目名 > 角色资产库", "mainContent"],
+        "status": "planned",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-storyboard",
+        "kind": "page-leaf",
+        "pageIds": ["page-storyboard"],
+        "output": "pages/storyboard.html",
+        "sharedRegions": [],
+        "privateRegions": ["shot-list", "detail-editor", "shot-toolbar"],
+        "mutableSlots": ["pageTitle=分镜工作台", "breadcrumb=项目名 > 分镜工作台", "mainContent"],
+        "status": "planned",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-video-generation",
+        "kind": "page-leaf",
+        "pageIds": ["page-video-generation"],
+        "output": "pages/video-generation.html",
+        "sharedRegions": [],
+        "privateRegions": ["queue-list", "status-bar", "config-panel"],
+        "mutableSlots": ["pageTitle=视频生成", "breadcrumb=项目名 > 视频生成", "mainContent"],
+        "status": "planned",
+        "children": []
+      },
+      {
+        "nodeId": "gen-page-post-production",
+        "kind": "page-leaf",
+        "pageIds": ["page-post-production"],
+        "output": "pages/post-production.html",
+        "sharedRegions": [],
+        "privateRegions": ["video-player", "timeline", "tab-panel", "clip-list"],
+        "mutableSlots": ["pageTitle=后期处理", "breadcrumb=项目名 > 后期处理", "mainContent"],
+        "status": "planned",
+        "children": []
+      }
+    ]
+  }
+}

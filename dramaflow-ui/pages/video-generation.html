@@ -1,0 +1,2252 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频生成 — DramaFlow</title>
+    <style id="theme-vars">
+/* ============================================
+   DramaFlow Design System — Brand CSS
+   Indigo-Violet palette | Inter + PingFang SC
+   ============================================ */
+
+/* --- CSS Custom Properties --- */
+:root {
+  /* Brand scale — single primary hue (Indigo) */
+  --color-primary-50:  #EEF2FF;
+  --color-primary-100: #E0E7FF;
+  --color-primary-200: #C7D2FE;
+  --color-primary-300: #A5B4FC;
+  --color-primary-400: #818CF8;
+  --color-primary-500: #6366F1;
+  --color-primary-600: #4F46E5;
+  --color-primary-700: #4338CA;
+  --color-primary-800: #3730A3;
+  --color-primary-900: #312E81;
+
+  /* Neutral gray scale */
+  --color-neutral-50:  #F8F9FC;
+  --color-neutral-100: #F1F3F9;
+  --color-neutral-200: #E2E6EF;
+  --color-neutral-300: #C8CFDD;
+  --color-neutral-400: #9CA3B5;
+  --color-neutral-500: #6B7280;
+  --color-neutral-600: #4B5563;
+  --color-neutral-700: #374151;
+  --color-neutral-800: #1F2937;
+  --color-neutral-900: #1A1A2E;
+
+  /* State colors */
+  --state-success: #10B981;
+  --state-success-bg: #ECFDF5;
+  --state-warning: #F59E0B;
+  --state-warning-bg: #FFFBEB;
+  --state-error:   #EF4444;
+  --state-error-bg:   #FEF2F2;
+  --state-info:    #3B82F6;
+  --state-info-bg:    #EFF6FF;
+
+  /* Semantic aliases (mapped to primary + neutral) */
+  --df-background:        var(--color-neutral-50);
+  --df-foreground:        var(--color-neutral-900);
+  --df-card:              #FFFFFF;
+  --df-card-foreground:   var(--color-neutral-900);
+  --df-popover:           #FFFFFF;
+  --df-popover-foreground:var(--color-neutral-900);
+  --df-primary:           var(--color-primary-600);
+  --df-primary-foreground:#FFFFFF;
+  --df-primary-hover:     var(--color-primary-700);
+  --df-muted:             var(--color-neutral-500);
+  --df-muted-foreground:  var(--color-neutral-500);
+  --df-border:            var(--color-neutral-200);
+  --df-input:             var(--color-neutral-100);
+  --df-ring:              var(--color-primary-200);
+
+  /* Radius scale */
+  --df-radius-sm:   4px;
+  --df-radius-md:   8px;
+  --df-radius-lg:   12px;
+  --df-radius-full: 9999px;
+
+  /* Shadow tokens — static surfaces use border, only floating layers get elevation */
+  --df-shadow-card:    0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+  --df-shadow-hover:   0 4px 12px rgba(0,0,0,0.08);
+  --df-shadow-popover: 0 8px 32px rgba(0,0,0,0.12);
+  --df-shadow-modal:   0 16px 48px rgba(0,0,0,0.15);
+
+  /* Typography */
+  --df-font-sans:   'Inter', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  --df-font-mono:   'JetBrains Mono', 'SF Mono', 'Consolas', 'Monaco', monospace;
+
+  /* Spacing scale (4px grid) */
+  --df-space-1:  4px;
+  --df-space-2:  8px;
+  --df-space-3:  12px;
+  --df-space-4:  16px;
+  --df-space-5:  20px;
+  --df-space-6:  24px;
+  --df-space-8:  32px;
+  --df-space-10: 40px;
+  --df-space-12: 48px;
+  --df-space-16: 64px;
+
+  /* Layout */
+  --df-sidebar-width:   240px;
+  --df-topbar-height:   56px;
+  --df-content-max:     1200px;
+
+  /* Transitions */
+  --df-transition-fast:   150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --df-transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --df-transition-slow:   500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Base Typography --- */
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--df-foreground);
+  background: var(--df-background);
+}
+
+h1, .h1 { font-size: 28px; font-weight: 700; line-height: 1.3; letter-spacing: -0.02em; }
+h2, .h2 { font-size: 20px; font-weight: 700; line-height: 1.35; }
+h3, .h3 { font-size: 16px; font-weight: 600; line-height: 1.4; }
+h4, .h4 { font-size: 14px; font-weight: 600; line-height: 1.5; }
+
+.text-xs  { font-size: 12px; line-height: 1.5; }
+.text-sm  { font-size: 13px; line-height: 1.5; }
+.text-md  { font-size: 14px; line-height: 1.6; }
+.text-mono { font-family: var(--df-font-mono); font-size: 13px; }
+
+.text-muted  { color: var(--df-muted); }
+.text-primary { color: var(--df-primary); }
+
+/* --- Utility Classes --- */
+.df-card {
+  background: var(--df-card);
+  border: 1px solid var(--df-border);
+  border-radius: var(--df-radius-lg);
+  box-shadow: var(--df-shadow-card);
+  transition: box-shadow var(--df-transition-fast), transform var(--df-transition-fast);
+}
+.df-card:hover {
+  box-shadow: var(--df-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.df-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--df-space-2);
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--df-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--df-transition-fast);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.df-btn:focus-visible {
+  outline: 2px solid var(--df-ring);
+  outline-offset: 2px;
+}
+
+.df-btn-sm  { height: 36px; padding: 0 var(--df-space-4); font-size: 13px; }
+.df-btn-md  { height: 40px; padding: 0 var(--df-space-5); }
+.df-btn-lg  { height: 48px; padding: 0 var(--df-space-6); font-size: 16px; }
+
+.df-btn-primary {
+  background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500));
+  color: #FFFFFF;
+  border-color: transparent;
+}
+.df-btn-primary:hover {
+  background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-600));
+}
+
+.df-btn-secondary {
+  background: transparent;
+  color: var(--df-foreground);
+  border-color: var(--df-border);
+}
+.df-btn-secondary:hover {
+  background: var(--color-neutral-100);
+  border-color: var(--color-neutral-300);
+}
+
+.df-btn-ghost {
+  background: transparent;
+  color: var(--df-muted);
+  border-color: transparent;
+}
+.df-btn-ghost:hover {
+  background: var(--color-neutral-100);
+  color: var(--df-foreground);
+}
+
+.df-input {
+  height: 40px;
+  padding: 0 var(--df-space-4);
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  color: var(--df-foreground);
+  background: var(--df-card);
+  border: 1px solid var(--df-border);
+  border-radius: var(--df-radius-md);
+  transition: border-color var(--df-transition-fast), box-shadow var(--df-transition-fast);
+  outline: none;
+}
+.df-input:focus {
+  border-color: var(--df-primary);
+  box-shadow: 0 0 0 3px var(--df-ring);
+}
+.df-input::placeholder {
+  color: var(--color-neutral-400);
+}
+
+.df-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--df-space-3);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--df-radius-full);
+  line-height: 1.5;
+}
+
+.df-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px var(--df-space-3);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-primary-700);
+  background: var(--color-primary-50);
+  border-radius: var(--df-radius-full);
+  border: 1px solid var(--color-primary-100);
+}
+
+.df-divider {
+  border: none;
+  border-top: 1px solid var(--df-border);
+  margin: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-neutral-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-400); }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--df-background);
+    --color-foreground: var(--df-foreground);
+    --color-card: var(--df-card);
+    --color-card-foreground: var(--df-card-foreground);
+    --color-popover: var(--df-popover);
+    --color-popover-foreground: var(--df-popover-foreground);
+    --color-primary: var(--df-primary);
+    --color-primary-foreground: var(--df-primary-foreground);
+    --color-muted: var(--df-muted);
+    --color-muted-foreground: var(--df-muted-foreground);
+    --color-border: var(--df-border);
+    --color-input: var(--df-input);
+    --color-ring: var(--df-ring);
+    --radius-sm: var(--df-radius-sm);
+    --radius-md: var(--df-radius-md);
+    --radius-lg: var(--df-radius-lg);
+  }
+  @layer base {
+    body { background: var(--df-background); color: var(--df-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--df-background); }
+      .text-background { color: var(--df-background); }
+      .border-background { border-color: var(--df-background); }
+      .ring-background { --tw-ring-color: var(--df-background); }
+      .bg-foreground { background-color: var(--df-foreground); }
+      .text-foreground { color: var(--df-foreground); }
+      .border-foreground { border-color: var(--df-foreground); }
+      .ring-foreground { --tw-ring-color: var(--df-foreground); }
+      .bg-card { background-color: var(--df-card); }
+      .text-card { color: var(--df-card); }
+      .border-card { border-color: var(--df-card); }
+      .ring-card { --tw-ring-color: var(--df-card); }
+      .bg-card-foreground { background-color: var(--df-card-foreground); }
+      .text-card-foreground { color: var(--df-card-foreground); }
+      .border-card-foreground { border-color: var(--df-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--df-card-foreground); }
+      .bg-popover { background-color: var(--df-popover); }
+      .text-popover { color: var(--df-popover); }
+      .border-popover { border-color: var(--df-popover); }
+      .ring-popover { --tw-ring-color: var(--df-popover); }
+      .bg-popover-foreground { background-color: var(--df-popover-foreground); }
+      .text-popover-foreground { color: var(--df-popover-foreground); }
+      .border-popover-foreground { border-color: var(--df-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--df-popover-foreground); }
+      .bg-primary { background-color: var(--df-primary); }
+      .text-primary { color: var(--df-primary); }
+      .border-primary { border-color: var(--df-primary); }
+      .ring-primary { --tw-ring-color: var(--df-primary); }
+      .bg-primary-foreground { background-color: var(--df-primary-foreground); }
+      .text-primary-foreground { color: var(--df-primary-foreground); }
+      .border-primary-foreground { border-color: var(--df-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--df-primary-foreground); }
+      .bg-muted { background-color: var(--df-muted); }
+      .text-muted { color: var(--df-muted); }
+      .border-muted { border-color: var(--df-muted); }
+      .ring-muted { --tw-ring-color: var(--df-muted); }
+      .bg-muted-foreground { background-color: var(--df-muted-foreground); }
+      .text-muted-foreground { color: var(--df-muted-foreground); }
+      .border-muted-foreground { border-color: var(--df-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--df-muted-foreground); }
+      .bg-border { background-color: var(--df-border); }
+      .text-border { color: var(--df-border); }
+      .border-border { border-color: var(--df-border); }
+      .ring-border { --tw-ring-color: var(--df-border); }
+      .bg-input { background-color: var(--df-input); }
+      .text-input { color: var(--df-input); }
+      .border-input { border-color: var(--df-input); }
+      .ring-input { --tw-ring-color: var(--df-input); }
+      .bg-ring { background-color: var(--df-ring); }
+      .text-ring { color: var(--df-ring); }
+      .border-ring { border-color: var(--df-ring); }
+      .ring-ring { --tw-ring-color: var(--df-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ========== SIDEBAR ========== -->
+  <aside class="sidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <svg class="sidebar-logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="logo-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#818CF8"/>
+            <stop offset="100%" stop-color="#4F46E5"/>
+          </linearGradient>
+        </defs>
+        <rect x="4" y="2" width="24" height="28" rx="4" fill="url(#logo-grad)"/>
+        <path d="M10 9h12M10 13h8M10 17h10M10 21h6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+        <path d="M22 22l3 3M25 22l-3 3" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="sidebar-logo-text">DramaFlow</span>
+    </div>
+
+    <!-- Navigation -->
+    <ul class="sidebar-nav">
+      <!-- 仪表盘 -->
+      <li class="sidebar-nav-item" data-nav-key="dashboard" data-dom-id="nav-dashboard">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="6" height="6" rx="1"/>
+          <rect x="11" y="3" width="6" height="6" rx="1"/>
+          <rect x="3" y="11" width="6" height="6" rx="1"/>
+          <rect x="11" y="11" width="6" height="6" rx="1"/>
+        </svg>
+        <span>仪表盘</span>
+      </li>
+
+      <!-- 剧本工厂 -->
+      <li class="sidebar-nav-item" data-nav-key="script-factory" data-dom-id="nav-script-factory">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 18V2h8l4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/>
+          <polyline points="12 2 12 6 16 6"/>
+          <line x1="8" y1="10" x2="12" y2="10"/>
+          <line x1="8" y1="13" x2="12" y2="13"/>
+          <line x1="8" y1="16" x2="10" y2="16"/>
+        </svg>
+        <span>剧本工厂</span>
+      </li>
+
+      <!-- 角色资产库 -->
+      <li class="sidebar-nav-item" data-nav-key="character-library" data-dom-id="nav-character-library">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="7" cy="7" r="3"/>
+          <path d="M1 18v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/>
+          <circle cx="14" cy="7" r="3"/>
+          <path d="M14 12h3a2 2 0 0 1 2 2v1"/>
+        </svg>
+        <span>角色资产库</span>
+      </li>
+
+      <!-- 分镜工作台 -->
+      <li class="sidebar-nav-item" data-nav-key="storyboard" data-dom-id="nav-storyboard">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="7" height="7" rx="1"/>
+          <rect x="11" y="2" width="7" height="7" rx="1"/>
+          <rect x="2" y="11" width="7" height="7" rx="1"/>
+          <rect x="11" y="11" width="7" height="7" rx="1"/>
+        </svg>
+        <span>分镜工作台</span>
+      </li>
+
+      <!-- 视频生成 (ACTIVE) -->
+      <li class="sidebar-nav-item active" data-nav-key="video-generation">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 15 10 5 17" fill="currentColor" stroke="none" opacity="0.7"/>
+          <polygon points="5 3 15 10 5 17" fill="none" stroke="currentColor"/>
+        </svg>
+        <span>视频生成</span>
+      </li>
+
+      <!-- 后期处理 -->
+      <li class="sidebar-nav-item" data-nav-key="post-production" data-dom-id="nav-post-production">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10" cy="10" r="7"/>
+          <circle cx="10" cy="10" r="3" fill="currentColor" stroke="none" opacity="0.5"/>
+          <line x1="10" y1="3" x2="10" y2="7"/>
+          <line x1="10" y1="13" x2="10" y2="17"/>
+          <line x1="3" y1="10" x2="7" y2="10"/>
+          <line x1="13" y1="10" x2="17" y2="10"/>
+        </svg>
+        <span>后期处理</span>
+      </li>
+    </ul>
+
+    <!-- User Area -->
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">创</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">创作者</div>
+        <div class="sidebar-user-role">Pro Plan</div>
+      </div>
+      <a class="sidebar-settings-link" href="#" title="设置">
+        <svg class="sidebar-settings-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="8" r="2.5"/>
+          <path d="M8 1.5v1.5M8 13v1.5M3.42 3.42l1.06 1.06M11.52 11.52l1.06 1.06M1.5 8H3M13 8h1.5M3.42 12.58l1.06-1.06M11.52 4.48l1.06-1.06"/>
+        </svg>
+      </a>
+    </div>
+
+  </aside>
+
+  <!-- ========== MAIN AREA ========== -->
+  <div class="main-area">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <a href="#" data-dom-id="breadcrumb-project">项目名</a>
+        <span class="topbar-breadcrumb-sep">/</span>
+        <span data-dom-id="breadcrumb-current">视频生成</span>
+      </div>
+      <div class="topbar-right">
+        <h1 data-dom-id="page-title">视频生成</h1>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="content">
+
+      <!-- Top Status Bar -->
+      <div class="status-bar" data-dom-id="status-bar">
+        <div class="status-bar-legend">
+          <span class="status-dot completed"><span>已完成 3</span></span>
+          <span class="status-dot generating"><span>生成中 2</span></span>
+          <span class="status-dot waiting"><span>等待中 6</span></span>
+          <span class="status-dot failed"><span>失败 1</span></span>
+        </div>
+        <div class="status-bar-total">总计 12 镜</div>
+      </div>
+
+      <!-- Batch Bar -->
+      <div class="batch-bar" data-dom-id="batch-bar">
+        <label class="select-all">
+          <input type="checkbox" data-dom-id="select-all">
+          <span>全选</span>
+        </label>
+        <div class="batch-actions">
+          <button class="btn-batch primary" data-dom-id="btn-batch-generate-all">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="3 1 12 7 3 13" fill="currentColor" stroke="none" opacity="0.8"/>
+            </svg>
+            全部生成
+          </button>
+          <button class="btn-batch" data-dom-id="btn-batch-retry-all">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 7a6 6 0 0 1 10.5-4M13 7a6 6 0 0 1-10.5 4"/>
+              <polyline points="11 1 11 4 8 4"/>
+              <polyline points="3 13 3 10 6 10"/>
+            </svg>
+            全选重试
+          </button>
+          <button class="btn-batch" data-dom-id="btn-batch-adopt-all">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="2 7 5 11 12 3"/>
+            </svg>
+            全部采纳
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Layout: Left Queue + Right Config -->
+      <div class="vg-layout">
+
+        <!-- Left: Queue -->
+        <div class="vg-left">
+          <div class="panel-header">
+            <span class="panel-header-title">生成队列</span>
+            <span class="panel-header-count">已选 3 / 12 镜</span>
+          </div>
+
+          <div class="queue-list" data-dom-id="queue-list">
+
+            <!-- Row 1: Completed -->
+            <div class="queue-row completed" data-dom-id="queue-row-1" data-shot-id="1.1" data-status="completed">
+              <div class="queue-row-check">
+                <input type="checkbox" checked data-dom-id="queue-check-1">
+              </div>
+              <span class="queue-shot-num">#1.1</span>
+              <div class="queue-thumbnail generated">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 19 12 5 21" fill="currentColor" stroke="none" opacity="0.5"/>
+                  <polygon points="5 3 19 12 5 21" fill="none" stroke="currentColor"/>
+                </svg>
+              </div>
+              <span class="queue-desc">林间小径，阳光透过树叶洒落，女主缓缓走入画面，远景</span>
+              <div class="queue-model-select">
+                <select data-dom-id="queue-model-1">
+                  <option value="jimeng" selected>即梦</option>
+                  <option value="kling">可灵</option>
+                  <option value="seko">Seko</option>
+                </select>
+              </div>
+              <div class="queue-status-area">
+                <span class="queue-status-badge completed">
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="2 6 5 9 10 3"/>
+                  </svg>
+                  已完成
+                </span>
+              </div>
+              <div class="queue-actions">
+                <button class="btn-action" title="预览" data-dom-id="btn-preview-1">
+                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="7" cy="7" r="2"/>
+                    <path d="M1 7s2.5-4.5 6-4.5S13 7 13 7s-2.5 4.5-6 4.5S1 7 1 7z"/>
+                  </svg>
+                </button>
+                <button class="btn-action primary-action" title="采纳" data-dom-id="btn-adopt-1">
+                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="2 7 5 11 12 3"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Row 2: Generating -->
+            <div class="queue-row generating" data-dom-id="queue-row-2" data-shot-id="1.2" data-status="generating">
+              <div class="queue-row-check">
+                <input type="checkbox" data-dom-id="queue-check-2">
+              </div>
+              <span class="queue-shot-num">#1.2</span>
+              <div class="queue-thumbnail">
+                <div class="queue-thumbnail-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                </div>
+              </div>
+              <span class="queue-desc">女主特写，微风吹动发丝，眼神坚毅，中景</span>
+              <div class="queue-model-select">
+                <select data-dom-id="queue-model-2">
+                  <option value="jimeng">即梦</option>
+                  <option value="kling" selected>可灵</option>
+                  <option value="seko">Seko</option>
+                </select>
+              </div>
+              <div class="queue-status-area">
+                <span class="queue-status-badge generating">生成中</span>
+                <div class="queue-progress">
+                  <div class="queue-progress-bar animating" style="width: 65%" data-dom-id="progress-2"></div>
+                </div>
+              </div>
+              <div class="queue-actions">
+                <button class="btn-action" title="预览" disabled data-dom-id="btn-preview-2" style="opacity:0.4">
+                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="7" cy="7" r="2"/>
+                    <path d="M1 7s2.5-4.5 6-4.5S13 7 13 7s-2.5 4.5-6 4.5S1 7 1 7z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Row 3: Generating -->
+            <div class="queue-row generating" data-dom-id="queue-row-3" data-shot-id="1.3" data-status="generating">
+              <div class="queue-row-check">
+                <input type="checkbox" data-dom-id="queue-check-3">
+              </div>
+              <span class="queue-shot-num">#1.3</span>
+              <div class="queue-thumbnail">
+                <div class="queue-thumbnail-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                </div>
+              </div>
+              <span class="queue-desc">男主推门而入，室内光线昏暗，逆光剪影，全景</span>
+              <div class="queue-model-select">
+                <select data-dom-id="queue-model-3">
+                  <option value="jimeng" selected>即梦</option>
+                  <option value="kling">可灵</option>
+                  <option value="seko">Seko</option>
+                </select>
+              </div>
+              <div class="queue-status-area">
+                <span class="queue-status-badge generating">生成中</span>
+                <div class="queue-progress">
+                  <div class="queue-progress-bar animating" style="width: 38%" data-dom-id="progress-3"></div>
+                </div>
+              </div>
+              <div class="queue-actions">
+                <button class="btn-action" title="预览" disabled data-dom-id="btn-preview-3" style="opacity:0.4">
+                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="7" cy="7" r="2"/>
+                    <path d="M1 7s2.5-4.5 6-4.5S13 7 13 7s-2.5 4.5-6 4.5S1 7 1 7z"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Row 4: Waiting -->
+            <div class="queue-row" data-dom-id="queue-row-4" data-shot-id="2.1" data-status="waiting">
+              <div class="queue-row-check">
+                <input type="checkbox" data-dom-id="queue-check-4">
+              </div>
+              <span class="queue-shot-num">#2.1</span>
+              <div class="queue-thumbnail">
+                <div class="queue-thumbnail-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                </div>
+              </div>
+              <span class="queue-desc">咖啡馆内景，两人对坐，窗外雨幕朦胧，近景</span>
+              <div class="queue-model-select">
+                <select data-dom-id="queue-model-4">
+                  <option value="jimeng">即梦</option>
+                  <option value="kling">可灵</option>
+                  <option value="seko" selected>Seko</option>
+                </select>
+              </div>
+              <div class="queue-status-area">
+                <span class="queue-status-badge waiting">等待中</span>
+              </div>
+              <div class="queue-actions">
+              </div>
+            </div>
+
+            <!-- Row 5: Waiting -->
+            <div class="queue-row" data-dom-id="queue-row-5" data-shot-id="2.2" data-status="waiting">
+              <div class="queue-row-check">
+                <input type="checkbox" data-dom-id="queue-check-5">
+              </div>
+              <span class="queue-shot-num">#2.2</span>
+              <div class="queue-thumbnail">
+                <div class="queue-thumbnail-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                  </svg>
+                </div>
+              </div>
+              <span class="queue-desc">女主握杯沉思，桌面倒影涟漪，特写镜头</span>
+              <div class="queue-model-select">
+                <select data-dom-id="queue-model-5">
+                  <option value="jimeng" selected>即梦</option>
+                  <option value="kling">可灵</option>
+                  <option value="seko">Seko</option>
+                </select>
+              </div>
+              <div class="queue-status-area">
+                <span class="queue-status-badge waiting">等待中</span>
+              </div>
+              <div class="queue-actions">
+              </div>
+            </div>
+
+            <!-- Row 6: Completed -->
+            <div class="queue-row completed" data-dom-id="queue-row-6" data-shot-id="2.3" data-status="completed">
+              <div class="queue-row-check">
+                <input type="checkbox" checked data-dom-id="queue-check-6">
+              </div>
+              <span class="queue-shot-num">#2.3</span>
+              <div class="queue-thumbnail generated">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 19 12 5 21" fill="currentColor" stroke="none" opacity="0.5"/>
+                  <polygon points="5 3 19 12 5 21" fill="none" stroke="currentColor"/>
+                </svg>
+              </div>
+              <span class="queue-desc">街角相遇，人群穿梭，两人目光交汇，中景</span>
+              <div class="queue-model-select">
+                <select data-dom-id="queue-model-6">
+                  <option value="jimeng" selected>即梦</option>
+                  <option value="kling">可灵</option>
+                  <option value="seko">Seko</option>
+                </select>
+              </div>
+              <div class="queue-status-area">
+                <span class="queue-status-badge completed">
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="2 6 5 9 10 3"/>
+                  </svg>
+                  已完成
+                </span>
+              </div>
+              <div class="queue-actions">
+                <button class="btn-action" title="预览" data-dom-id="btn-preview-6">
+                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="7" cy="7" r="2"/>
+                    <path d="M1 7s2.5-4.5 6-4.5S13 7 13 7s-2.5 4.5-6 4.5S1 7 1 7z"/>
+                  </svg>
+                </button>
+                <button class="btn-action primary-action" title="采纳" data-dom-id="btn-adopt-6">
+                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="2 7 5 11 12 3"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Row 7: Failed -->
+            <div class="queue-row failed" data-dom-id="queue-row-7" data-shot-id="3.1" data-status="failed">
+              <div class="queue-row-check">
+                <input type="checkbox" data-dom-id="queue-check-7">
+              </div>
+              <span class="queue-shot-num">#3.1</span>
+              <div class="queue-thumbnail">
+                <div class="queue-thumbnail-placeholder">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                  </svg>
+                </div>
+              </div>
+              <span class="queue-desc">天台夕阳，两人并肩而立，城市远景，全景</span>
+              <div class="queue-model-select">
+                <select data-dom-id="queue-model-7">
+                  <option value="jimeng">即梦</option>
+                  <option value="kling" selected>可灵</option>
+                  <option value="seko">Seko</option>
+                </select>
+              </div>
+              <div class="queue-status-area">
+                <span class="queue-status-badge failed">
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="6" cy="6" r="4.5"/>
+                    <line x1="4.5" y1="4.5" x2="7.5" y2="7.5"/>
+                    <line x1="7.5" y1="4.5" x2="4.5" y2="7.5"/>
+                  </svg>
+                  失败
+                </span>
+                <span class="queue-error-hint">模型超时，请重试</span>
+              </div>
+              <div class="queue-actions">
+                <button class="btn-action" title="重试" data-dom-id="btn-retry-7">
+                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 7a6 6 0 0 1 10.5-4M13 7a6 6 0 0 1-10.5 4"/>
+                    <polyline points="11 1 11 4 8 4"/>
+                    <polyline points="3 13 3 10 6 10"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Row 8: Completed -->
+            <div class="queue-row completed" data-dom-id="queue-row-8" data-shot-id="3.2" data-status="completed">
+              <div class="queue-row-check">
+                <input type="checkbox" checked data-dom-id="queue-check-8">
+              </div>
+              <span class="queue-shot-num">#3.2</span>
+              <div class="queue-thumbnail generated">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 19 12 5 21" fill="currentColor" stroke="none" opacity="0.5"/>
+                  <polygon points="5 3 19 12 5 21" fill="none" stroke="currentColor"/>
+                </svg>
+              </div>
+              <span class="queue-desc">书本翻开，女主手指轻抚书页，暖黄色调，特写</span>
+              <div class="queue-model-select">
+                <select data-dom-id="queue-model-8">
+                  <option value="jimeng">即梦</option>
+                  <option value="kling">可灵</option>
+                  <option value="seko" selected>Seko</option>
+                </select>
+              </div>
+              <div class="queue-status-area">
+                <span class="queue-status-badge completed">
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="2 6 5 9 10 3"/>
+                  </svg>
+                  已完成
+                </span>
+              </div>
+              <div class="queue-actions">
+                <button class="btn-action" title="预览" data-dom-id="btn-preview-8">
+                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="7" cy="7" r="2"/>
+                    <path d="M1 7s2.5-4.5 6-4.5S13 7 13 7s-2.5 4.5-6 4.5S1 7 1 7z"/>
+                  </svg>
+                </button>
+                <button class="btn-action primary-action" title="采纳" data-dom-id="btn-adopt-8">
+                  <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="2 7 5 11 12 3"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Right: Config Panel -->
+        <div class="vg-right" data-dom-id="config-panel">
+
+          <!-- Model Settings -->
+          <div class="config-section" data-dom-id="config-model">
+            <div class="config-section-title">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="12" height="12" rx="2"/>
+                <path d="M6 8l1.5 1.5L10 7"/>
+              </svg>
+              模型设置
+            </div>
+            <div class="config-field">
+              <label class="config-label">默认模型</label>
+              <select class="config-select" data-dom-id="config-default-model">
+                <option value="jimeng" selected>即梦 (Jimeng)</option>
+                <option value="kling">可灵 (Kling)</option>
+                <option value="seko">Seko</option>
+              </select>
+            </div>
+
+            <!-- Collapsible Advanced Options -->
+            <div class="config-collapse" data-dom-id="config-advanced-collapse">
+              <div class="config-collapse-header" data-dom-id="config-advanced-toggle">
+                <span>高级选项</span>
+                <svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="1 1 5 5 9 1"/>
+                </svg>
+              </div>
+              <div class="config-collapse-body">
+                <div class="config-field">
+                  <label class="config-label">分辨率</label>
+                  <select class="config-select" data-dom-id="config-resolution">
+                    <option value="720p">720p (1280x720)</option>
+                    <option value="1080p" selected>1080p (1920x1080)</option>
+                  </select>
+                </div>
+                <div class="config-field">
+                  <label class="config-label">帧率</label>
+                  <select class="config-select" data-dom-id="config-fps">
+                    <option value="24" selected>24 fps</option>
+                    <option value="30">30 fps</option>
+                  </select>
+                </div>
+                <div class="config-field">
+                  <label class="config-label">画面风格</label>
+                  <select class="config-select" data-dom-id="config-style">
+                    <option value="realistic" selected>写实</option>
+                    <option value="anime">动漫</option>
+                    <option value="cinematic">电影感</option>
+                  </select>
+                </div>
+                <div class="config-field">
+                  <label class="config-label">角色一致性强度</label>
+                  <div class="config-slider-wrap">
+                    <input type="range" class="config-slider" min="0" max="100" value="75" data-dom-id="config-consistency-slider">
+                    <span class="config-slider-value" data-dom-id="config-consistency-value">75</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Generation Strategy -->
+          <div class="config-section" data-dom-id="config-strategy">
+            <div class="config-section-title">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="8" cy="8" r="6"/>
+                <polyline points="8 4 8 8 11 10"/>
+              </svg>
+              生成策略
+            </div>
+            <div class="config-field">
+              <label class="config-label">生成模式</label>
+              <div class="radio-group">
+                <label class="radio-option selected" data-dom-id="strategy-serial">
+                  <input type="radio" name="strategy" value="serial" checked>
+                  <div class="radio-option-content">
+                    <div class="radio-option-label">串行模式</div>
+                    <div class="radio-option-desc">逐镜生成，便于精细控制每个镜头</div>
+                  </div>
+                </label>
+                <label class="radio-option" data-dom-id="strategy-parallel">
+                  <input type="radio" name="strategy" value="parallel">
+                  <div class="radio-option-content">
+                    <div class="radio-option-label">并行模式</div>
+                    <div class="radio-option-desc">多镜同时生成，预计节省约 40% 时间</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+            <div class="config-field">
+              <label class="config-label">自动重试</label>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input type="number" class="config-number-input" value="2" min="1" max="3" data-dom-id="config-auto-retry">
+                <span style="font-size:12px;color:var(--color-neutral-500);">次（1-3次）</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cost Estimate -->
+          <div class="cost-card" data-dom-id="config-cost">
+            <div class="cost-card-title">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="8" cy="8" r="6"/>
+                <line x1="8" y1="5" x2="8" y2="8"/>
+                <circle cx="8" cy="10.5" r="0.5" fill="currentColor" stroke="none"/>
+              </svg>
+              费用预估
+            </div>
+            <div class="cost-row">
+              <span class="cost-row-label">当前批次预估消耗</span>
+              <span class="cost-row-value highlight" data-dom-id="cost-batch">120 积分</span>
+            </div>
+            <hr class="cost-divider">
+            <div class="cost-row">
+              <span class="cost-row-label">账户剩余</span>
+              <span class="cost-row-value" data-dom-id="cost-remaining">2,580 积分</span>
+            </div>
+            <hr class="cost-divider">
+            <div class="cost-row">
+              <span class="cost-row-label">预计生成总时长</span>
+              <span class="cost-row-value" data-dom-id="cost-time">~8 分钟</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Bottom Status Bar -->
+      <div class="bottom-bar" data-dom-id="bottom-bar">
+        <div class="bottom-bar-progress">
+          <span class="bottom-bar-progress-text" data-dom-id="bottom-progress-text">25%</span>
+          <div class="bottom-bar-progress-bar">
+            <div class="bottom-bar-progress-fill" style="width:25%" data-dom-id="bottom-progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="preview-carousel">
+          <span class="preview-carousel-label">已完成镜头:</span>
+          <div class="preview-carousel-track" data-dom-id="preview-carousel">
+            <div class="preview-thumb" data-dom-id="preview-thumb-1">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="2 6 5 9 10 3"/>
+              </svg>
+            </div>
+            <div class="preview-thumb" data-dom-id="preview-thumb-6">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="2 6 5 9 10 3"/>
+              </svg>
+            </div>
+            <div class="preview-thumb" data-dom-id="preview-thumb-8">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="2 6 5 9 10 3"/>
+              </svg>
+            </div>
+            <div class="preview-thumb placeholder" data-dom-id="preview-thumb-placeholder-1">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="1" width="10" height="10" rx="1"/>
+                <circle cx="4" cy="4" r="1"/>
+                <polyline points="10 8 7 5 2 10"/>
+              </svg>
+            </div>
+            <div class="preview-thumb placeholder" data-dom-id="preview-thumb-placeholder-2">
+              <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="1" width="10" height="10" rx="1"/>
+                <circle cx="4" cy="4" r="1"/>
+                <polyline points="10 8 7 5 2 10"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-bar-right">
+          <label class="toggle-label" data-dom-id="toggle-auto-post">
+            <div class="toggle-switch">
+              <input type="checkbox" data-dom-id="toggle-auto-post-input">
+              <span class="toggle-slider"></span>
+            </div>
+            <span>全部完成后自动进入后期</span>
+          </label>
+          <button class="btn-post" data-dom-id="btn-enter-post">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="7" cy="7" r="5"/>
+              <polyline points="7 4 7 7 9 9"/>
+            </svg>
+            进入后期工作台
+          </button>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+</div>
+
+
+    <style>
+    /* ===== CSS Variables (Brand System) ===== */
+    :root {
+      --df-sidebar-width: 240px;
+      --df-topbar-height: 56px;
+      --df-primary: #4F46E5;
+      --df-background: #F8F9FC;
+      --df-foreground: #1E1E2E;
+      --df-card: #FFFFFF;
+      --df-border: #E5E7EB;
+      --df-muted: #9CA3AF;
+      --df-font-sans: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+      --df-space-xs: 4px;
+      --df-space-sm: 8px;
+      --df-space-md: 16px;
+      --df-space-lg: 24px;
+      --df-space-xl: 32px;
+      --df-radius-sm: 6px;
+      --df-radius-md: 8px;
+      --df-radius-lg: 12px;
+      --df-transition-fast: 150ms ease;
+      --color-neutral-900: #1A1A2E;
+      --color-primary-600: #4F46E5;
+      --color-primary-50: #EEF2FF;
+    }
+
+    /* ===== Reset & Base ===== */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--df-font-sans);
+      background: var(--df-background);
+      color: var(--df-foreground);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ===== App Layout ===== */
+    .app-layout {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== Sidebar ===== */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: var(--df-sidebar-width);
+      background: var(--color-neutral-900);
+      color: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .sidebar::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-sm);
+      padding: var(--df-space-lg) var(--df-space-md);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar-logo-icon {
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, #818CF8 0%, #4F46E5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: var(--df-space-sm) 0;
+      list-style: none;
+    }
+
+    .sidebar-nav-item {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-sm);
+      padding: var(--df-space-sm) var(--df-space-md);
+      margin: 2px var(--df-space-sm);
+      border-radius: var(--df-radius-sm);
+      font-size: 14px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.7);
+      cursor: pointer;
+      transition: background var(--df-transition-fast), color var(--df-transition-fast), border var(--df-transition-fast);
+      border-left: 3px solid transparent;
+      text-decoration: none;
+      user-select: none;
+    }
+
+    .sidebar-nav-item:hover {
+      background: rgba(255,255,255,0.08);
+      color: #FFFFFF;
+    }
+
+    .sidebar-nav-item.active {
+      background: rgba(99,102,241,0.15);
+      color: #FFFFFF;
+      border-left-color: var(--color-primary-600);
+      font-weight: 500;
+    }
+
+    .sidebar-nav-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    .sidebar-nav-item.active .sidebar-nav-icon,
+    .sidebar-nav-item:hover .sidebar-nav-icon {
+      opacity: 1;
+    }
+
+    .sidebar-user {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-sm);
+      padding: var(--df-space-md);
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar-user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366F1 0%, #A78BFA 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .sidebar-user-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sidebar-user-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #FFFFFF;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-user-role {
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+    }
+
+    .sidebar-settings-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--df-radius-sm);
+      color: rgba(255,255,255,0.45);
+      transition: background var(--df-transition-fast), color var(--df-transition-fast);
+      cursor: pointer;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .sidebar-settings-link:hover {
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.8);
+    }
+
+    .sidebar-settings-icon {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ===== Main Area ===== */
+    .main-area {
+      margin-left: var(--df-sidebar-width);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== Topbar ===== */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: var(--df-topbar-height);
+      background: var(--df-card);
+      border-bottom: 1px solid var(--df-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--df-space-lg);
+      flex-shrink: 0;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-xs);
+      font-size: 13px;
+      color: var(--df-muted);
+    }
+
+    .topbar-left a {
+      color: var(--df-muted);
+      text-decoration: none;
+      transition: color var(--df-transition-fast);
+    }
+
+    .topbar-left a:hover {
+      color: var(--color-primary-600);
+    }
+
+    .topbar-breadcrumb-sep {
+      color: var(--df-muted);
+      margin: 0 2px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-md);
+    }
+
+    .topbar-right h1 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--df-foreground);
+    }
+
+    /* ===== Content ===== */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--df-background);
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .content::-webkit-scrollbar {
+      width: 6px;
+    }
+    .content::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.12);
+      border-radius: 3px;
+    }
+
+    /* ===== Page-specific Styles ===== */
+
+    /* --- Status Bar --- */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-lg);
+      padding: var(--df-space-3) var(--df-space-lg);
+      background: var(--df-card);
+      border-bottom: 1px solid var(--df-border);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .status-bar-legend {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-md);
+      font-size: 13px;
+      color: var(--color-neutral-600);
+    }
+
+    .status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .status-dot.completed::before { background: var(--state-success); }
+    .status-dot.generating::before { background: var(--state-info); }
+    .status-dot.waiting::before { background: var(--color-neutral-400); }
+    .status-dot.failed::before { background: var(--state-error); }
+
+    .status-dot.completed span { color: var(--state-success); font-weight: 600; }
+    .status-dot.generating span { color: var(--state-info); font-weight: 600; }
+    .status-dot.waiting span { color: var(--color-neutral-500); font-weight: 600; }
+    .status-dot.failed span { color: var(--state-error); font-weight: 600; }
+
+    .status-bar-total {
+      font-size: 13px;
+      color: var(--color-neutral-600);
+      margin-left: auto;
+    }
+
+    /* --- Two-column Layout --- */
+    .vg-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .vg-left {
+      flex: 0 0 65%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid var(--df-border);
+    }
+
+    .vg-right {
+      flex: 0 0 35%;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: var(--df-space-lg);
+      gap: var(--df-space-lg);
+    }
+
+    .vg-right::-webkit-scrollbar {
+      width: 6px;
+    }
+    .vg-right::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.12);
+      border-radius: 3px;
+    }
+
+    /* --- Batch Bar --- */
+    .batch-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-md);
+      padding: var(--df-space-3) var(--df-space-lg);
+      background: var(--df-card);
+      border-bottom: 1px solid var(--df-border);
+      flex-shrink: 0;
+    }
+
+    .batch-bar .select-all {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-2);
+      font-size: 13px;
+      color: var(--color-neutral-600);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .batch-bar .select-all input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--color-primary-600);
+    }
+
+    .batch-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-2);
+      margin-left: var(--df-space-md);
+    }
+
+    .btn-batch {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--df-space-1);
+      height: 32px;
+      padding: 0 var(--df-space-3);
+      font-family: var(--df-font-sans);
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: var(--df-radius-sm);
+      border: 1px solid var(--df-border);
+      background: var(--df-card);
+      color: var(--color-neutral-700);
+      cursor: pointer;
+      transition: all var(--df-transition-fast);
+      white-space: nowrap;
+    }
+
+    .btn-batch:hover {
+      background: var(--color-neutral-100);
+      border-color: var(--color-neutral-300);
+    }
+
+    .btn-batch.primary {
+      background: var(--color-primary-600);
+      color: #FFFFFF;
+      border-color: var(--color-primary-600);
+    }
+
+    .btn-batch.primary:hover {
+      background: var(--color-primary-700);
+    }
+
+    .btn-batch svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    /* --- Queue List --- */
+    .queue-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--df-space-3) var(--df-space-lg);
+      display: flex;
+      flex-direction: column;
+      gap: var(--df-space-2);
+    }
+
+    .queue-list::-webkit-scrollbar {
+      width: 6px;
+    }
+    .queue-list::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.12);
+      border-radius: 3px;
+    }
+
+    /* --- Queue Row --- */
+    .queue-row {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-3);
+      padding: var(--df-space-3);
+      background: var(--df-card);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-md);
+      transition: background var(--df-transition-fast), box-shadow var(--df-transition-fast);
+      cursor: default;
+    }
+
+    .queue-row:hover {
+      box-shadow: var(--df-shadow-hover);
+    }
+
+    .queue-row.selected {
+      border-color: var(--color-primary-400);
+      box-shadow: 0 0 0 2px var(--color-primary-100);
+    }
+
+    .queue-row.completed {
+      background: var(--state-success-bg);
+      border-color: #D1FAE5;
+    }
+
+    .queue-row.failed {
+      background: var(--state-error-bg);
+      border-color: #FECACA;
+    }
+
+    .queue-row.generating {
+      background: var(--state-info-bg);
+      border-color: #BFDBFE;
+    }
+
+    .queue-row-check {
+      flex-shrink: 0;
+    }
+
+    .queue-row-check input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: var(--color-primary-600);
+    }
+
+    .queue-shot-num {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--color-primary-600);
+      background: var(--color-primary-50);
+      padding: 2px 8px;
+      border-radius: var(--df-radius-sm);
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-width: 40px;
+      text-align: center;
+    }
+
+    .queue-thumbnail {
+      width: 80px;
+      height: 45px;
+      border-radius: 4px;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: var(--color-neutral-200);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .queue-thumbnail-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--color-neutral-100) 0%, var(--color-neutral-200) 100%);
+    }
+
+    .queue-thumbnail-placeholder svg {
+      width: 22px;
+      height: 22px;
+      color: var(--color-neutral-400);
+    }
+
+    .queue-thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .queue-desc {
+      flex: 1;
+      min-width: 0;
+      font-size: 13px;
+      color: var(--color-neutral-700);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.4;
+    }
+
+    .queue-model-select {
+      flex-shrink: 0;
+    }
+
+    .queue-model-select select {
+      height: 30px;
+      padding: 0 24px 0 var(--df-space-2);
+      font-family: var(--df-font-sans);
+      font-size: 12px;
+      color: var(--color-neutral-700);
+      background: var(--df-card);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-sm);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239CA3B5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      outline: none;
+      transition: border-color var(--df-transition-fast);
+    }
+
+    .queue-model-select select:focus {
+      border-color: var(--color-primary-400);
+    }
+
+    .queue-status-area {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex-shrink: 0;
+      min-width: 100px;
+    }
+
+    .queue-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: var(--df-radius-full);
+      line-height: 1.5;
+      white-space: nowrap;
+    }
+
+    .queue-status-badge.completed {
+      background: var(--state-success-bg);
+      color: var(--state-success);
+    }
+
+    .queue-status-badge.generating {
+      background: var(--state-info-bg);
+      color: var(--state-info);
+    }
+
+    .queue-status-badge.waiting {
+      background: var(--color-neutral-100);
+      color: var(--color-neutral-500);
+    }
+
+    .queue-status-badge.failed {
+      background: var(--state-error-bg);
+      color: var(--state-error);
+    }
+
+    .queue-status-badge svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    .queue-progress {
+      width: 100%;
+      max-width: 120px;
+      height: 4px;
+      background: var(--color-neutral-200);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .queue-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--state-info), var(--color-primary-400));
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+
+    .queue-progress-bar.animating {
+      animation: progress-pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes progress-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    .queue-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-1);
+      flex-shrink: 0;
+    }
+
+    .btn-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--df-radius-sm);
+      border: 1px solid var(--df-border);
+      background: var(--df-card);
+      color: var(--color-neutral-500);
+      cursor: pointer;
+      transition: all var(--df-transition-fast);
+      flex-shrink: 0;
+    }
+
+    .btn-action:hover {
+      background: var(--color-neutral-100);
+      color: var(--color-neutral-700);
+      border-color: var(--color-neutral-300);
+    }
+
+    .btn-action.primary-action {
+      background: var(--color-primary-50);
+      color: var(--color-primary-600);
+      border-color: var(--color-primary-200);
+    }
+
+    .btn-action.primary-action:hover {
+      background: var(--color-primary-100);
+      color: var(--color-primary-700);
+    }
+
+    .btn-action svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .queue-error-hint {
+      font-size: 11px;
+      color: var(--state-error);
+      margin-top: 2px;
+      white-space: nowrap;
+    }
+
+    /* --- Config Panel --- */
+    .config-section {
+      background: var(--df-card);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-lg);
+      padding: var(--df-space-lg);
+    }
+
+    .config-section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--df-foreground);
+      margin-bottom: var(--df-space-4);
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-2);
+    }
+
+    .config-section-title svg {
+      width: 16px;
+      height: 16px;
+      color: var(--color-primary-500);
+    }
+
+    .config-field {
+      margin-bottom: var(--df-space-4);
+    }
+
+    .config-field:last-child {
+      margin-bottom: 0;
+    }
+
+    .config-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-neutral-600);
+      margin-bottom: var(--df-space-1);
+    }
+
+    .config-select {
+      width: 100%;
+      height: 38px;
+      padding: 0 var(--df-space-3);
+      font-family: var(--df-font-sans);
+      font-size: 13px;
+      color: var(--df-foreground);
+      background: var(--df-card);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-md);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239CA3B5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 10px 6px;
+      outline: none;
+      transition: border-color var(--df-transition-fast);
+    }
+
+    .config-select:focus {
+      border-color: var(--color-primary-400);
+      box-shadow: 0 0 0 3px var(--df-ring);
+    }
+
+    /* --- Collapsible --- */
+    .config-collapse {
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-md);
+      overflow: hidden;
+    }
+
+    .config-collapse-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--df-space-3) var(--df-space-4);
+      background: var(--color-neutral-50);
+      cursor: pointer;
+      user-select: none;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--color-neutral-700);
+      transition: background var(--df-transition-fast);
+    }
+
+    .config-collapse-header:hover {
+      background: var(--color-neutral-100);
+    }
+
+    .config-collapse-header svg {
+      width: 14px;
+      height: 14px;
+      color: var(--color-neutral-400);
+      transition: transform var(--df-transition-fast);
+    }
+
+    .config-collapse.open .config-collapse-header svg {
+      transform: rotate(180deg);
+    }
+
+    .config-collapse-body {
+      padding: var(--df-space-4);
+      display: none;
+    }
+
+    .config-collapse.open .config-collapse-body {
+      display: block;
+    }
+
+    /* --- Radio Group --- */
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--df-space-2);
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--df-space-2);
+      cursor: pointer;
+      padding: var(--df-space-2) var(--df-space-3);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-md);
+      transition: all var(--df-transition-fast);
+    }
+
+    .radio-option:hover {
+      border-color: var(--color-primary-300);
+    }
+
+    .radio-option.selected {
+      border-color: var(--color-primary-400);
+      background: var(--color-primary-50);
+    }
+
+    .radio-option input[type="radio"] {
+      margin-top: 2px;
+      accent-color: var(--color-primary-600);
+      flex-shrink: 0;
+    }
+
+    .radio-option-content {
+      flex: 1;
+    }
+
+    .radio-option-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--df-foreground);
+    }
+
+    .radio-option-desc {
+      font-size: 12px;
+      color: var(--color-neutral-500);
+      margin-top: 2px;
+    }
+
+    /* --- Number Input --- */
+    .config-number-input {
+      width: 80px;
+      height: 32px;
+      padding: 0 var(--df-space-2);
+      font-family: var(--df-font-sans);
+      font-size: 13px;
+      color: var(--df-foreground);
+      background: var(--df-card);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-sm);
+      text-align: center;
+      outline: none;
+      transition: border-color var(--df-transition-fast);
+    }
+
+    .config-number-input:focus {
+      border-color: var(--color-primary-400);
+    }
+
+    /* --- Slider --- */
+    .config-slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-3);
+    }
+
+    .config-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: var(--color-neutral-200);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    .config-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--color-primary-600);
+      cursor: pointer;
+      border: 2px solid #FFFFFF;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    .config-slider-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-primary-600);
+      min-width: 36px;
+      text-align: right;
+    }
+
+    /* --- Cost Estimate --- */
+    .cost-card {
+      background: linear-gradient(135deg, var(--color-primary-50) 0%, #F5F3FF 100%);
+      border: 1px solid var(--color-primary-100);
+      border-radius: var(--df-radius-lg);
+      padding: var(--df-space-lg);
+    }
+
+    .cost-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-primary-700);
+      margin-bottom: var(--df-space-4);
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-2);
+    }
+
+    .cost-card-title svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .cost-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--df-space-2) 0;
+      font-size: 13px;
+    }
+
+    .cost-row-label {
+      color: var(--color-neutral-600);
+    }
+
+    .cost-row-value {
+      font-weight: 600;
+      color: var(--df-foreground);
+    }
+
+    .cost-row-value.highlight {
+      color: var(--color-primary-600);
+      font-size: 16px;
+    }
+
+    .cost-divider {
+      border: none;
+      border-top: 1px dashed var(--color-primary-200);
+      margin: var(--df-space-2) 0;
+    }
+
+    /* --- Bottom Status Bar --- */
+    .bottom-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-lg);
+      padding: var(--df-space-3) var(--df-space-lg);
+      background: var(--df-card);
+      border-top: 1px solid var(--df-border);
+      flex-shrink: 0;
+      z-index: 40;
+    }
+
+    .bottom-bar-progress {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-3);
+      flex-shrink: 0;
+    }
+
+    .bottom-bar-progress-text {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--df-foreground);
+      min-width: 40px;
+    }
+
+    .bottom-bar-progress-bar {
+      width: 120px;
+      height: 6px;
+      background: var(--color-neutral-200);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .bottom-bar-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-primary-500), var(--color-primary-600));
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+
+    /* --- Preview Carousel --- */
+    .preview-carousel {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-2);
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .preview-carousel-label {
+      font-size: 12px;
+      color: var(--color-neutral-500);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .preview-carousel-track {
+      display: flex;
+      gap: var(--df-space-2);
+      overflow-x: auto;
+      flex: 1;
+    }
+
+    .preview-carousel-track::-webkit-scrollbar {
+      height: 0;
+    }
+
+    .preview-thumb {
+      width: 48px;
+      height: 27px;
+      border-radius: 3px;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: var(--color-neutral-200);
+      border: 2px solid var(--state-success);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preview-thumb svg {
+      width: 14px;
+      height: 14px;
+      color: var(--state-success);
+    }
+
+    .preview-thumb.placeholder {
+      border-color: var(--color-neutral-300);
+    }
+
+    .preview-thumb.placeholder svg {
+      color: var(--color-neutral-400);
+    }
+
+    /* --- Toggle Switch --- */
+    .toggle-label {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-2);
+      font-size: 13px;
+      color: var(--color-neutral-600);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--color-neutral-300);
+      border-radius: 11px;
+      transition: background var(--df-transition-fast);
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 2px;
+      bottom: 2px;
+      background: #FFFFFF;
+      border-radius: 50%;
+      transition: transform var(--df-transition-fast);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background: var(--color-primary-500);
+    }
+
+    .toggle-switch input:checked + .toggle-slider::before {
+      transform: translateX(18px);
+    }
+
+    .bottom-bar-right {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-4);
+      margin-left: auto;
+    }
+
+    .btn-post {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--df-space-2);
+      height: 36px;
+      padding: 0 var(--df-space-5);
+      font-family: var(--df-font-sans);
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: var(--df-radius-md);
+      border: 1px solid var(--color-primary-600);
+      background: var(--color-primary-600);
+      color: #FFFFFF;
+      cursor: pointer;
+      transition: all var(--df-transition-fast);
+      white-space: nowrap;
+    }
+
+    .btn-post:hover {
+      background: var(--color-primary-700);
+      border-color: var(--color-primary-700);
+    }
+
+    .btn-post svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* --- Panel Header --- */
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--df-space-3) var(--df-space-lg);
+      background: var(--color-neutral-50);
+      border-bottom: 1px solid var(--df-border);
+      flex-shrink: 0;
+    }
+
+    .panel-header-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--df-foreground);
+    }
+
+    .panel-header-count {
+      font-size: 12px;
+      color: var(--color-neutral-500);
+    }
+
+    /* --- Generated thumbnail fake --- */
+    .queue-thumbnail.generated {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    }
+
+    .queue-thumbnail.generated svg {
+      color: rgba(255,255,255,0.6);
+    }
+  </style>
+</body>
+</html>

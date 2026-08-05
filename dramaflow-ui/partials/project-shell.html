@@ -1,0 +1,404 @@
+<!-- ============================================
+  DramaFlow Shared Project Shell
+  Included by all 6 pages of the platform.
+  Provides: sidebar + topbar + content slot.
+============================================ -->
+
+<style>
+/* ===== CSS Variables (Brand System) ===== */
+:root {
+  --df-sidebar-width: 240px;
+  --df-topbar-height: 56px;
+  --df-primary: #4F46E5;
+  --df-background: #F8F9FC;
+  --df-foreground: #1E1E2E;
+  --df-card: #FFFFFF;
+  --df-border: #E5E7EB;
+  --df-muted: #9CA3AF;
+  --df-font-sans: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+  --df-space-xs: 4px;
+  --df-space-sm: 8px;
+  --df-space-md: 16px;
+  --df-space-lg: 24px;
+  --df-space-xl: 32px;
+  --df-radius-sm: 6px;
+  --df-radius-md: 8px;
+  --df-radius-lg: 12px;
+  --df-transition-fast: 150ms ease;
+  --color-neutral-900: #1A1A2E;
+  --color-primary-600: #4F46E5;
+  --color-primary-50: #EEF2FF;
+}
+
+/* ===== Reset & Base ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--df-font-sans);
+  background: var(--df-background);
+  color: var(--df-foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== App Layout ===== */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ===== Sidebar ===== */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--df-sidebar-width);
+  background: var(--color-neutral-900);
+  color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 2px;
+}
+
+/* ---- Logo ---- */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--df-space-sm);
+  padding: var(--df-space-lg) var(--df-space-md);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.sidebar-logo-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.sidebar-logo-text {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  background: linear-gradient(135deg, #818CF8 0%, #4F46E5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---- Nav ---- */
+.sidebar-nav {
+  flex: 1;
+  padding: var(--df-space-sm) 0;
+  list-style: none;
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--df-space-sm);
+  padding: var(--df-space-sm) var(--df-space-md);
+  margin: 2px var(--df-space-sm);
+  border-radius: var(--df-radius-sm);
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  transition: background var(--df-transition-fast), color var(--df-transition-fast), border var(--df-transition-fast);
+  border-left: 3px solid transparent;
+  text-decoration: none;
+  user-select: none;
+}
+
+.sidebar-nav-item:hover {
+  background: rgba(255,255,255,0.08);
+  color: #FFFFFF;
+}
+
+.sidebar-nav-item.active {
+  background: rgba(99,102,241,0.15);
+  color: #FFFFFF;
+  border-left-color: var(--color-primary-600);
+  font-weight: 500;
+}
+
+.sidebar-nav-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.sidebar-nav-item.active .sidebar-nav-icon,
+.sidebar-nav-item:hover .sidebar-nav-icon {
+  opacity: 1;
+}
+
+/* ---- Bottom User Area ---- */
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: var(--df-space-sm);
+  padding: var(--df-space-md);
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.sidebar-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366F1 0%, #A78BFA 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.sidebar-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-role {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+}
+
+.sidebar-settings-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--df-radius-sm);
+  color: rgba(255,255,255,0.45);
+  transition: background var(--df-transition-fast), color var(--df-transition-fast);
+  cursor: pointer;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.sidebar-settings-link:hover {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.8);
+}
+
+.sidebar-settings-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ===== Main Area ===== */
+.main-area {
+  margin-left: var(--df-sidebar-width);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ===== Topbar ===== */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: var(--df-topbar-height);
+  background: var(--df-card);
+  border-bottom: 1px solid var(--df-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--df-space-lg);
+  flex-shrink: 0;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--df-space-xs);
+  font-size: 13px;
+  color: var(--df-muted);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--df-space-md);
+}
+
+/* ===== Content ===== */
+.content {
+  flex: 1;
+  padding: var(--df-space-lg);
+  overflow-y: auto;
+  background: var(--df-background);
+}
+
+.content::-webkit-scrollbar {
+  width: 6px;
+}
+.content::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+  border-radius: 3px;
+}
+</style>
+
+<div class="app-layout">
+
+  <!-- ========== SIDEBAR ========== -->
+  <aside class="sidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <svg class="sidebar-logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="logo-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#818CF8"/>
+            <stop offset="100%" stop-color="#4F46E5"/>
+          </linearGradient>
+        </defs>
+        <rect x="4" y="2" width="24" height="28" rx="4" fill="url(#logo-grad)"/>
+        <path d="M10 9h12M10 13h8M10 17h10M10 21h6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+        <path d="M22 22l3 3M25 22l-3 3" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="sidebar-logo-text">DramaFlow</span>
+    </div>
+
+    <!-- Navigation -->
+    <ul class="sidebar-nav">
+      <!-- 仪表盘 -->
+      <li class="sidebar-nav-item active" data-nav-key="dashboard">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="6" height="6" rx="1"/>
+          <rect x="11" y="3" width="6" height="6" rx="1"/>
+          <rect x="3" y="11" width="6" height="6" rx="1"/>
+          <rect x="11" y="11" width="6" height="6" rx="1"/>
+        </svg>
+        <span>仪表盘</span>
+      </li>
+
+      <!-- 剧本工厂 -->
+      <li class="sidebar-nav-item" data-nav-key="script-factory">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 18V2h8l4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/>
+          <polyline points="12 2 12 6 16 6"/>
+          <line x1="8" y1="10" x2="12" y2="10"/>
+          <line x1="8" y1="13" x2="12" y2="13"/>
+          <line x1="8" y1="16" x2="10" y2="16"/>
+        </svg>
+        <span>剧本工厂</span>
+      </li>
+
+      <!-- 角色资产库 -->
+      <li class="sidebar-nav-item" data-nav-key="character-library">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="7" cy="7" r="3"/>
+          <path d="M1 18v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/>
+          <circle cx="14" cy="7" r="3"/>
+          <path d="M14 12h3a2 2 0 0 1 2 2v1"/>
+        </svg>
+        <span>角色资产库</span>
+      </li>
+
+      <!-- 分镜工作台 -->
+      <li class="sidebar-nav-item" data-nav-key="storyboard">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="7" height="7" rx="1"/>
+          <rect x="11" y="2" width="7" height="7" rx="1"/>
+          <rect x="2" y="11" width="7" height="7" rx="1"/>
+          <rect x="11" y="11" width="7" height="7" rx="1"/>
+        </svg>
+        <span>分镜工作台</span>
+      </li>
+
+      <!-- 视频生成 -->
+      <li class="sidebar-nav-item" data-nav-key="video-generation">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 15 10 5 17" fill="currentColor" stroke="none" opacity="0.7"/>
+          <polygon points="5 3 15 10 5 17" fill="none" stroke="currentColor"/>
+        </svg>
+        <span>视频生成</span>
+      </li>
+
+      <!-- 后期处理 -->
+      <li class="sidebar-nav-item" data-nav-key="post-production">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10" cy="10" r="7"/>
+          <circle cx="10" cy="10" r="3" fill="currentColor" stroke="none" opacity="0.5"/>
+          <line x1="10" y1="3" x2="10" y2="7"/>
+          <line x1="10" y1="13" x2="10" y2="17"/>
+          <line x1="3" y1="10" x2="7" y2="10"/>
+          <line x1="13" y1="10" x2="17" y2="10"/>
+        </svg>
+        <span>后期处理</span>
+      </li>
+    </ul>
+
+    <!-- User Area -->
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">创</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">创作者</div>
+        <div class="sidebar-user-role">Pro Plan</div>
+      </div>
+      <a class="sidebar-settings-link" href="#" title="设置">
+        <svg class="sidebar-settings-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="8" r="2.5"/>
+          <path d="M8 1.5v1.5M8 13v1.5M3.42 3.42l1.06 1.06M11.52 11.52l1.06 1.06M1.5 8H3M13 8h1.5M3.42 12.58l1.06-1.06M11.52 4.48l1.06-1.06"/>
+        </svg>
+      </a>
+    </div>
+
+  </aside>
+
+  <!-- ========== MAIN AREA ========== -->
+  <div class="main-area">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <!-- SLOT: breadcrumb -->
+      </div>
+      <div class="topbar-right">
+        <!-- SLOT: pageTitle -->
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="content">
+      <!-- SLOT: mainContent -->
+    </main>
+
+  </div>
+
+</div>

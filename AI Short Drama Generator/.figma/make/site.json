@@ -1,0 +1,10 @@
+{
+  "description": "Streamline the creation of AI-generated short dramas, enabling writers and creators to efficiently produce engaging scripts and narratives.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

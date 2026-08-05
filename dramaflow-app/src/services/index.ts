@@ -1,0 +1,2 @@
+export { getAIService } from './ai';
+export type { AIService, AIGenerateScriptParams, AIGenerateShotsParams, AIDubbingParams, AIGenerateCharacterParams, AIGenerateSuggestionParams, AIProvider, AIServiceConfig } from './ai';

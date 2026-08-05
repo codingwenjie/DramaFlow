@@ -1,0 +1,59 @@
+{
+  "name": "dramaflow-app",
+  "version": "1.0.0",
+  "description": "AI 短剧生成提效工具",
+  "author": "DramaFlow",
+  "private": true,
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "build:desktop": "vite build && tsc -p tsconfig.electron.json && electron-builder",
+    "build:electron": "tsc -p tsconfig.electron.json"
+  },
+  "build": {
+    "appId": "com.dramaflow.app",
+    "productName": "DramaFlow",
+    "directories": {
+      "output": "release"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "your-github-username",
+      "repo": "dramaflow-releases"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.icns",
+      "executableName": "DramaFlow"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
+    }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.0.0",
+    "concurrently": "^9.0.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^24.13.3",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.0",
+    "vite": "^8.0.0",
+    "wait-on": "^8.0.0"
+  }
+}

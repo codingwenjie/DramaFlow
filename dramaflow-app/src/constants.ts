@@ -1,0 +1,18 @@
+export const C = {
+  bg: '#F5F6F8',
+  sidebar: '#FFFFFF',
+  border: '#E4E7EE',
+  text: '#1A1D24',
+  textSub: '#5A6070',
+  textMute: '#9AA0B0',
+  active: '#FFF8EC',
+  amber: '#E69500',
+  amberLight: '#FFF3D0',
+  blue: '#2563EB',
+  green: '#16A34A',
+  greenBg: '#ECFDF5',
+  card: '#FFFFFF',
+  inputBg: '#F5F6F8',
+  tag: '#EEF0F4',
+  tagText: '#5A6070',
+};

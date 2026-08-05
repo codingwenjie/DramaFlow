@@ -1,0 +1,588 @@
+{
+  "schemaVersion": "1.0",
+  "skillProvenance": {
+    "name": "solo-design",
+    "version": "2026.07.22.00.00.00",
+    "version_source": "skill-release-manifest.json",
+    "schema_version": "1.0",
+    "release": "prompt-base-cloud-ssot-migration",
+    "read_status": "loaded"
+  },
+  "project": {
+    "resolvedLane": "complex_html_page",
+    "operation": "create",
+    "intentProfile": {
+      "caseFamily": "complex_html_page",
+      "pageCount": 6,
+      "deviceType": "desktop"
+    },
+    "selectedIntentWorkflowRead": true,
+    "contextRequirementsLoaded": [
+      {
+        "path": "shared-runtime/runtime-boundaries/lane-runtime-contracts.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "shared-runtime/agent-dispatch-runtime/lane-dispatch-index.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "shared-runtime/agent-dispatch-runtime/shared-page-rendering-kernel.md",
+        "readStatus": "declared",
+        "bodyRead": false
+      },
+      {
+        "path": "delivery-quality/page-rendering-quality-gate.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "delivery-quality/design-artifact-validation.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "delivery-quality/delivery-evidence-contract.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "visual-experience/visual-experience-guidelines.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      },
+      {
+        "path": "visual-experience/visual-checkpoint-protocol.md",
+        "readStatus": "loaded",
+        "bodyRead": true
+      }
+    ],
+    "contextReadScope": "complex_html_page — multi-page project with 6 pages: dashboard, script-factory, character-library, storyboard, video-generation, post-production",
+    "readScopeLedger": [],
+    "dispatchPreflightManifest": [],
+    "expectedDispatches": [],
+    "validationRunDiscipline": {
+      "preDispatch": "validate-lane-runtime-contract.mjs",
+      "postGeneration": "validate-design-workspace.mjs",
+      "finalGate": "validate-finish-readiness.mjs"
+    },
+    "validationHistory": [
+      {
+        "reportPath": "validation-report.json",
+        "reportHash": "54fcd063cabbf9535e26020d62bac08a1ceab6b024b43d15dcfc633cb6374fb2",
+        "checkedAt": "2026-08-04T07:17:40.406Z",
+        "success": false,
+        "exitCode": 1,
+        "renderBlockingErrorCount": 1,
+        "repairPlanHints": [
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body"
+        ],
+        "errorSignatures": [
+          {
+            "errorClass": "artifact-readiness",
+            "normalized": "[design-file] Validation failed for .design file batch: ======================================== [FAIL] Validation failed ---------------------------------------- Found 32 issues: 1. [data[0].devMetadata.interactions[0].domId] domId \"nav-script-factory\" is registered in .design but not found in HTML file \"pages/dashboard.html\". Fix: add data-dom-id=\"nav-script-factory\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 2. [data[0].devMetadata.interactions[1].domId] domId \"nav-character-library\" is registered in .design but not found in HTML file \"pages/dashboard.html\". Fix: add data-dom-id=\"nav-character-library\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 3. [data[0].devMetadata.interactions[2].domId] domId \"nav-storyboard\" is registered in .design but not found in HTML file \"pages/dashboard.html\". Fix: add data-dom-id=\"nav-storyboard\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 4. [data[0].devMetadata.interactions[3].domId] domId \"nav-video-generation\" is registered in .design but not found in HTML file \"pages/dashboard.html\". Fix: add data-dom-id=\"nav-video-generation\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 5. [data[0].devMetadata.interactions[4].domId] domId \"nav-post-production\" is registered in .design but not found in HTML file \"pages/dashboard.html\". Fix: add data-dom-id=\"nav-post-production\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 6. [data[1].devMetadata.interactions[0].domId] domId \"nav-dashboard\" is registered in .design but not found in HTML file \"pages/script-factory.html\". Fix: add data-dom-id=\"nav-dashboard\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 7. [data[1].devMetadata.interactions[1].domId] domId \"nav-character-library\" is registered in .design but not found in HTML file \"pages/script-factory.html\". Fix: add data-dom-id=\"nav-character-library\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 8. [data[1].devMetadata.interactions[2].domId] domId \"nav-storyboard\" is registered in .design but not found in HTML file \"pages/script-factory.html\". Fix: add data-dom-id=\"nav-storyboard\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 9. [data[1].devMetadata.interactions[3].domId] domId \"nav-video-generation\" is registered in .design but not found in HTML file \"pages/script-factory.html\". Fix: add data-dom-id=\"nav-video-generation\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 10. [data[1].devMetadata.interactions[4].domId] domId \"nav-post-production\" is registered in .design but not found in HTML file \"pages/script-factory.html\". Fix: add data-dom-id=\"nav-post-production\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 11. [data[2].devMetadata.interactions[0].domId] domId \"nav-dashboard\" is registered in .design but not found in HTML file \"pages/character-library.html\". Fix: add data-dom-id=\"nav-dashboard\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 12. [data[2].devMetadata.interactions[1].domId] domId \"nav-script-factory\" is registered in .design but not found in HTML file \"pages/character-library.html\". Fix: add data-dom-id=\"nav-script-factory\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 13. [data[2].devMetadata.interactions[2].domId] domId \"nav-storyboard\" is registered in .design but not found in HTML file \"pages/character-library.html\". Fix: add data-dom-id=\"nav-storyboard\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 14. [data[2].devMetadata.interactions[3].domId] domId \"nav-video-generation\" is registered in .design but not found in HTML file \"pages/character-library.html\". Fix: add data-dom-id=\"nav-video-generation\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 15. [data[2].devMetadata.interactions[4].domId] domId \"nav-post-production\" is registered in .design but not found in HTML file \"pages/character-library.html\". Fix: add data-dom-id=\"nav-post-production\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 16. [data[2].devMetadata.interactions[5].domId] domId \"btn-confirm-character\" is registered in .design but not found in HTML file \"pages/character-library.html\". Fix: add data-dom-id=\"btn-confirm-character\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 17. [data[3].devMetadata.interactions[0].domId] domId \"nav-dashboard\" is registered in .design but not found in HTML file \"pages/storyboard.html\". Fix: add data-dom-id=\"nav-dashboard\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 18. [data[3].devMetadata.interactions[1].domId] domId \"nav-script-factory\" is registered in .design but not found in HTML file \"pages/storyboard.html\". Fix: add data-dom-id=\"nav-script-factory\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 19. [data[3].devMetadata.interactions[2].domId] domId \"nav-character-library\" is registered in .design but not found in HTML file \"pages/storyboard.html\". Fix: add data-dom-id=\"nav-character-library\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 20. [data[3].devMetadata.interactions[3].domId] domId \"nav-video-generation\" is registered in .design but not found in HTML file \"pages/storyboard.html\". Fix: add data-dom-id=\"nav-video-generation\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 21. [data[3].devMetadata.interactions[4].domId] domId \"nav-post-production\" is registered in .design but not found in HTML file \"pages/storyboard.html\". Fix: add data-dom-id=\"nav-post-production\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 22. [data[4].devMetadata.interactions[0].domId] domId \"nav-dashboard\" is registered in .design but not found in HTML file \"pages/video-generation.html\". Fix: add data-dom-id=\"nav-dashboard\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 23. [data[4].devMetadata.interactions[1].domId] domId \"nav-script-factory\" is registered in .design but not found in HTML file \"pages/video-generation.html\". Fix: add data-dom-id=\"nav-script-factory\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 24. [data[4].devMetadata.interactions[2].domId] domId \"nav-character-library\" is registered in .design but not found in HTML file \"pages/video-generation.html\". Fix: add data-dom-id=\"nav-character-library\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 25. [data[4].devMetadata.interactions[3].domId] domId \"nav-storyboard\" is registered in .design but not found in HTML file \"pages/video-generation.html\". Fix: add data-dom-id=\"nav-storyboard\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 26. [data[4].devMetadata.interactions[4].domId] domId \"nav-post-production\" is registered in .design but not found in HTML file \"pages/video-generation.html\". Fix: add data-dom-id=\"nav-post-production\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 27. [data[4].devMetadata.interactions[5].domId] domId \"btn-enter-post\" is registered in .design but not found in HTML file \"pages/video-generation.html\". Fix: add data-dom-id=\"btn-enter-post\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 28. [data[5].devMetadata.interactions[0].domId] domId \"nav-dashboard\" is registered in .design but not found in HTML file \"pages/post-production.html\". Fix: add data-dom-id=\"nav-dashboard\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 29. [data[5].devMetadata.interactions[1].domId] domId \"nav-script-factory\" is registered in .design but not found in HTML file \"pages/post-production.html\". Fix: add data-dom-id=\"nav-script-factory\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 30. [data[5].devMetadata.interactions[2].domId] domId \"nav-character-library\" is registered in .design but not found in HTML file \"pages/post-production.html\". Fix: add data-dom-id=\"nav-character-library\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 31. [data[5].devMetadata.interactions[3].domId] domId \"nav-storyboard\" is registered in .design but not found in HTML file \"pages/post-production.html\". Fix: add data-dom-id=\"nav-storyboard\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 32. [data[5].devMetadata.interactions[4].domId] domId \"nav-video-generation\" is registered in .design but not found in HTML file \"pages/post-production.html\". Fix: add data-dom-id=\"nav-video-generation\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. ========================================",
+            "signature": "b20fa11c4cb779fafe430ea925fb2dcd7f4c1b1962d9b8a72896084d4e8e4c5e"
+          }
+        ],
+        "terminalState": null
+      },
+      {
+        "reportPath": "validation-report.json",
+        "reportHash": "2b6ed988c2bf3fb2e72f62d289df0eb96c987248dd00765b12f69dc7208ce2cd",
+        "checkedAt": "2026-08-04T07:21:16.184Z",
+        "success": false,
+        "exitCode": 1,
+        "renderBlockingErrorCount": 1,
+        "repairPlanHints": [
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body",
+          "hardcoded-color-in-body"
+        ],
+        "errorSignatures": [
+          {
+            "errorClass": "artifact-readiness",
+            "normalized": "[design-file] Validation failed for .design file batch: ======================================== [FAIL] Validation failed ---------------------------------------- Found 2 issues: 1. [data[2].devMetadata.interactions[5].domId] domId \"btn-confirm-character\" is registered in .design but not found in HTML file \"pages/character-library.html\". Fix: add data-dom-id=\"btn-confirm-character\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. 2. [data[4].devMetadata.interactions[5].domId] domId \"btn-enter-post\" is registered in .design but not found in HTML file \"pages/video-generation.html\". Fix: add data-dom-id=\"btn-enter-post\" to the corresponding element in the HTML file, or remove this interaction entry if the link no longer exists. ========================================",
+            "signature": "07278f3cae0ed066cbd6758f5f9f562c35b8c56f345e012d3ee55f8184f990b5"
+          }
+        ],
+        "terminalState": null
+      }
+    ],
+    "validationRepairLedger": [
+      {
+        "failedReportPath": "validation-report.json",
+        "failedReportHash": "54fcd063cabbf9535e26020d62bac08a1ceab6b024b43d15dcfc633cb6374fb2",
+        "repairWorkflowReadPath": "intent-workflows/intent-project-mutation/main-agent-repair-workflow.md",
+        "repairStartedAt": "2026-08-04T07:18:05.021Z",
+        "repairEntryStatus": "started-awaiting-owner-batch-repair",
+        "ownerTriage": [
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "character-library.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "dashboard.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "post-production.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "script-factory.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "storyboard.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "video-generation.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          }
+        ],
+        "repairPlanHints": [
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "character-library.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "dashboard.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "post-production.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "script-factory.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "storyboard.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "video-generation.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          }
+        ],
+        "repairActions": [],
+        "revalidationReportPath": null,
+        "revalidationReportHash": null,
+        "revalidationSuccess": null,
+        "blockedReason": null
+      },
+      {
+        "failedReportPath": "validation-report.json",
+        "failedReportHash": "2b6ed988c2bf3fb2e72f62d289df0eb96c987248dd00765b12f69dc7208ce2cd",
+        "repairWorkflowReadPath": "intent-workflows/intent-project-mutation/main-agent-repair-workflow.md",
+        "repairStartedAt": "2026-08-04T07:23:29.688Z",
+        "repairEntryStatus": "started-awaiting-owner-batch-repair",
+        "ownerTriage": [
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "character-library.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "dashboard.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "post-production.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "script-factory.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "storyboard.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          },
+          {
+            "owner": "sub-agent",
+            "errorClass": "hardcoded-color-in-body",
+            "affectedFiles": [
+              "video-generation.html"
+            ],
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once"
+          }
+        ],
+        "repairPlanHints": [
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "character-library.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "dashboard.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "post-production.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "script-factory.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "storyboard.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          },
+          {
+            "errorClass": "hardcoded-color-in-body",
+            "owner": "sub-agent",
+            "repairScope": "targeted-token-replace",
+            "strategy": "targeted_token_replace_once",
+            "affectedFiles": [
+              "video-generation.html"
+            ],
+            "repairReportPath": null,
+            "repairAlreadyAttempted": false,
+            "allowSourceRead": "no-full-html-read",
+            "maxValidationRuns": 2
+          }
+        ],
+        "repairActions": [],
+        "revalidationReportPath": null,
+        "revalidationReportHash": null,
+        "revalidationSuccess": null,
+        "blockedReason": null
+      }
+    ],
+    "cssPreflightEvidence": {
+      "status": "passed",
+      "preflightPath": ".preflight/preflight.html",
+      "hasThemeVars": true,
+      "hasSemanticFallback": true,
+      "hasThemeInline": true
+    },
+    "designRead": "SaaS生产力工具 / 短剧创作者&MCN机构 / 专业高效 / 信息密度中等 / 避免过度装饰",
+    "designDials": {
+      "layoutVariance": 3,
+      "motionIntensity": 2,
+      "visualDensity": 3
+    },
+    "lowValueCallWatchdog": {
+      "noProgressNextAction": "dispatch_pages"
+    },
+    "visualQualityCheckpoints": [
+      {
+        "id": "visual-anchor",
+        "target": "每个页面使用统一的侧边栏+顶部面包屑导航锚定视觉框架",
+        "status": "defined"
+      },
+      {
+        "id": "information-hierarchy",
+        "target": "统计卡片 > 主操作区 > 列表/详情区的三层信息结构",
+        "status": "defined"
+      },
+      {
+        "id": "composition-structure",
+        "target": "侧边栏240px + 主内容区自适应，页面内使用卡片网格或双栏布局",
+        "status": "defined"
+      },
+      {
+        "id": "implementation-strategy",
+        "target": "共用sidebar partial，每页独立HTML，CSS变量驱动主题",
+        "status": "defined"
+      }
+    ],
+    "repairEntryEvidence": [
+      {
+        "failedReportPath": "validation-report.json",
+        "failedReportHash": "54fcd063cabbf9535e26020d62bac08a1ceab6b024b43d15dcfc633cb6374fb2",
+        "repairWorkflowReadPath": "intent-workflows/intent-project-mutation/main-agent-repair-workflow.md",
+        "repairStartedAt": "2026-08-04T07:18:05.021Z",
+        "ledgerIndex": 0,
+        "ownerTriageCount": 6,
+        "repairActionCount": 0,
+        "revalidationReportPath": null,
+        "revalidationReportHash": null,
+        "revalidationSuccess": null
+      },
+      {
+        "failedReportPath": "validation-report.json",
+        "failedReportHash": "2b6ed988c2bf3fb2e72f62d289df0eb96c987248dd00765b12f69dc7208ce2cd",
+        "repairWorkflowReadPath": "intent-workflows/intent-project-mutation/main-agent-repair-workflow.md",
+        "repairStartedAt": "2026-08-04T07:23:29.688Z",
+        "ledgerIndex": 1,
+        "ownerTriageCount": 6,
+        "repairActionCount": 0,
+        "revalidationReportPath": null,
+        "revalidationReportHash": null,
+        "revalidationSuccess": null
+      }
+    ]
+  },
+  "designSource": {
+    "operatingMode": "free-explore",
+    "cssFilePath": "colors_and_type.css",
+    "brandPrefix": "df",
+    "styleConstraints": {
+      "radiusMax": 12,
+      "staticShadowAlphaMax": 0.05
+    }
+  },
+  "pages": [
+    {
+      "nodeId": "page-dashboard",
+      "title": "仪表盘",
+      "htmlSrc": "pages/dashboard.html",
+      "pageIndex": 1,
+      "visualNorthStar": "数据仪表盘，统计卡片 + 项目网格 + 快速入口，侧边栏布局",
+      "compositionPattern": "sidebar-main",
+      "continuityAnchors": [
+        "侧边栏240px深色背景，白色文字，导航菜单",
+        "顶部面包屑导航 + 页面标题",
+        "卡片使用 df-card 样式，圆角12px，浅投影"
+      ],
+      "componentPlan": "stats-cards, project-grid, filter-tabs, quick-actions",
+      "imagePlan": "placeholder project thumbnails (16:9 gradient cards)"
+    },
+    {
+      "nodeId": "page-script-factory",
+      "title": "剧本工厂",
+      "htmlSrc": "pages/script-factory.html",
+      "pageIndex": 2,
+      "visualNorthStar": "创作工具，左右双栏布局，左侧输入区右侧预览区",
+      "compositionPattern": "split-panel",
+      "continuityAnchors": [
+        "侧边栏240px深色背景，白色文字，导航菜单",
+        "顶部面包屑导航 + 页面标题",
+        "卡片使用 df-card 样式，圆角12px，浅投影"
+      ],
+      "componentPlan": "tab-switcher, text-input, config-panel, episode-list, preview-panel",
+      "imagePlan": "none"
+    },
+    {
+      "nodeId": "page-character-library",
+      "title": "角色资产库",
+      "htmlSrc": "pages/character-library.html",
+      "pageIndex": 3,
+      "visualNorthStar": "资产管理，横向滚动角色卡片 + 详情面板，三视图切换",
+      "compositionPattern": "horizontal-scroll-detail",
+      "continuityAnchors": [
+        "侧边栏240px深色背景，白色文字，导航菜单",
+        "顶部面包屑导航 + 页面标题",
+        "卡片使用 df-card 样式，圆角12px，浅投影"
+      ],
+      "componentPlan": "character-cards, detail-panel, view-tabs, expression-grid, attribute-editor",
+      "imagePlan": "placeholder character avatars and reference images"
+    },
+    {
+      "nodeId": "page-storyboard",
+      "title": "分镜工作台",
+      "htmlSrc": "pages/storyboard.html",
+      "pageIndex": 4,
+      "visualNorthStar": "编辑工作台，列表+详情双栏，拖拽排序，镜头参数编辑",
+      "compositionPattern": "list-detail",
+      "continuityAnchors": [
+        "侧边栏240px深色背景，白色文字，导航菜单",
+        "顶部面包屑导航 + 页面标题",
+        "卡片使用 df-card 样式，圆角12px，浅投影"
+      ],
+      "componentPlan": "shot-list, detail-editor, shot-type-selector, camera-move-selector, prompt-editor",
+      "imagePlan": "placeholder shot thumbnails"
+    },
+    {
+      "nodeId": "page-video-generation",
+      "title": "视频生成面板",
+      "htmlSrc": "pages/video-generation.html",
+      "pageIndex": 5,
+      "visualNorthStar": "任务队列监控，紧凑列表 + 右侧配置面板，状态颜色编码",
+      "compositionPattern": "queue-config",
+      "continuityAnchors": [
+        "侧边栏240px深色背景，白色文字，导航菜单",
+        "顶部面包屑导航 + 页面标题",
+        "卡片使用 df-card 样式，圆角12px，浅投影"
+      ],
+      "componentPlan": "queue-list, status-bar, config-panel, model-selector, batch-actions",
+      "imagePlan": "placeholder video thumbnails"
+    },
+    {
+      "nodeId": "page-post-production",
+      "title": "后期处理工作台",
+      "htmlSrc": "pages/post-production.html",
+      "pageIndex": 6,
+      "visualNorthStar": "视频编辑，三栏布局，中央视频预览 + 时间轴，左右功能面板",
+      "compositionPattern": "three-column",
+      "continuityAnchors": [
+        "侧边栏240px深色背景，白色文字，导航菜单",
+        "顶部面包屑导航 + 页面标题",
+        "卡片使用 df-card 样式，圆角12px，浅投影"
+      ],
+      "componentPlan": "video-player, timeline, tab-panel, subtitle-editor, audio-controls",
+      "imagePlan": "placeholder video stills and waveform"
+    }
+  ],
+  "assets": [],
+  "wiringPlan": [],
+  "hiddenInteractionPlan": []
+}

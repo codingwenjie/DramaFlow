@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preflight</title>
+    <style id="theme-vars">
+/* ============================================
+   DramaFlow Design System — Brand CSS
+   Indigo-Violet palette | Inter + PingFang SC
+   ============================================ */
+
+/* --- CSS Custom Properties --- */
+:root {
+  /* Brand scale — single primary hue (Indigo) */
+  --color-primary-50:  #EEF2FF;
+  --color-primary-100: #E0E7FF;
+  --color-primary-200: #C7D2FE;
+  --color-primary-300: #A5B4FC;
+  --color-primary-400: #818CF8;
+  --color-primary-500: #6366F1;
+  --color-primary-600: #4F46E5;
+  --color-primary-700: #4338CA;
+  --color-primary-800: #3730A3;
+  --color-primary-900: #312E81;
+
+  /* Neutral gray scale */
+  --color-neutral-50:  #F8F9FC;
+  --color-neutral-100: #F1F3F9;
+  --color-neutral-200: #E2E6EF;
+  --color-neutral-300: #C8CFDD;
+  --color-neutral-400: #9CA3B5;
+  --color-neutral-500: #6B7280;
+  --color-neutral-600: #4B5563;
+  --color-neutral-700: #374151;
+  --color-neutral-800: #1F2937;
+  --color-neutral-900: #1A1A2E;
+
+  /* State colors */
+  --state-success: #10B981;
+  --state-success-bg: #ECFDF5;
+  --state-warning: #F59E0B;
+  --state-warning-bg: #FFFBEB;
+  --state-error:   #EF4444;
+  --state-error-bg:   #FEF2F2;
+  --state-info:    #3B82F6;
+  --state-info-bg:    #EFF6FF;
+
+  /* Semantic aliases (mapped to primary + neutral) */
+  --df-background:        var(--color-neutral-50);
+  --df-foreground:        var(--color-neutral-900);
+  --df-card:              #FFFFFF;
+  --df-card-foreground:   var(--color-neutral-900);
+  --df-popover:           #FFFFFF;
+  --df-popover-foreground:var(--color-neutral-900);
+  --df-primary:           var(--color-primary-600);
+  --df-primary-foreground:#FFFFFF;
+  --df-primary-hover:     var(--color-primary-700);
+  --df-muted:             var(--color-neutral-500);
+  --df-muted-foreground:  var(--color-neutral-500);
+  --df-border:            var(--color-neutral-200);
+  --df-input:             var(--color-neutral-100);
+  --df-ring:              var(--color-primary-200);
+
+  /* Radius scale */
+  --df-radius-sm:   4px;
+  --df-radius-md:   8px;
+  --df-radius-lg:   12px;
+  --df-radius-full: 9999px;
+
+  /* Shadow tokens — static surfaces use border, only floating layers get elevation */
+  --df-shadow-card:    0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+  --df-shadow-hover:   0 4px 12px rgba(0,0,0,0.08);
+  --df-shadow-popover: 0 8px 32px rgba(0,0,0,0.12);
+  --df-shadow-modal:   0 16px 48px rgba(0,0,0,0.15);
+
+  /* Typography */
+  --df-font-sans:   'Inter', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  --df-font-mono:   'JetBrains Mono', 'SF Mono', 'Consolas', 'Monaco', monospace;
+
+  /* Spacing scale (4px grid) */
+  --df-space-1:  4px;
+  --df-space-2:  8px;
+  --df-space-3:  12px;
+  --df-space-4:  16px;
+  --df-space-5:  20px;
+  --df-space-6:  24px;
+  --df-space-8:  32px;
+  --df-space-10: 40px;
+  --df-space-12: 48px;
+  --df-space-16: 64px;
+
+  /* Layout */
+  --df-sidebar-width:   240px;
+  --df-topbar-height:   56px;
+  --df-content-max:     1200px;
+
+  /* Transitions */
+  --df-transition-fast:   150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --df-transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --df-transition-slow:   500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Base Typography --- */
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--df-foreground);
+  background: var(--df-background);
+}
+
+h1, .h1 { font-size: 28px; font-weight: 700; line-height: 1.3; letter-spacing: -0.02em; }
+h2, .h2 { font-size: 20px; font-weight: 700; line-height: 1.35; }
+h3, .h3 { font-size: 16px; font-weight: 600; line-height: 1.4; }
+h4, .h4 { font-size: 14px; font-weight: 600; line-height: 1.5; }
+
+.text-xs  { font-size: 12px; line-height: 1.5; }
+.text-sm  { font-size: 13px; line-height: 1.5; }
+.text-md  { font-size: 14px; line-height: 1.6; }
+.text-mono { font-family: var(--df-font-mono); font-size: 13px; }
+
+.text-muted  { color: var(--df-muted); }
+.text-primary { color: var(--df-primary); }
+
+/* --- Utility Classes --- */
+.df-card {
+  background: var(--df-card);
+  border: 1px solid var(--df-border);
+  border-radius: var(--df-radius-lg);
+  box-shadow: var(--df-shadow-card);
+  transition: box-shadow var(--df-transition-fast), transform var(--df-transition-fast);
+}
+.df-card:hover {
+  box-shadow: var(--df-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.df-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--df-space-2);
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--df-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--df-transition-fast);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.df-btn:focus-visible {
+  outline: 2px solid var(--df-ring);
+  outline-offset: 2px;
+}
+
+.df-btn-sm  { height: 36px; padding: 0 var(--df-space-4); font-size: 13px; }
+.df-btn-md  { height: 40px; padding: 0 var(--df-space-5); }
+.df-btn-lg  { height: 48px; padding: 0 var(--df-space-6); font-size: 16px; }
+
+.df-btn-primary {
+  background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500));
+  color: #FFFFFF;
+  border-color: transparent;
+}
+.df-btn-primary:hover {
+  background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-600));
+}
+
+.df-btn-secondary {
+  background: transparent;
+  color: var(--df-foreground);
+  border-color: var(--df-border);
+}
+.df-btn-secondary:hover {
+  background: var(--color-neutral-100);
+  border-color: var(--color-neutral-300);
+}
+
+.df-btn-ghost {
+  background: transparent;
+  color: var(--df-muted);
+  border-color: transparent;
+}
+.df-btn-ghost:hover {
+  background: var(--color-neutral-100);
+  color: var(--df-foreground);
+}
+
+.df-input {
+  height: 40px;
+  padding: 0 var(--df-space-4);
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  color: var(--df-foreground);
+  background: var(--df-card);
+  border: 1px solid var(--df-border);
+  border-radius: var(--df-radius-md);
+  transition: border-color var(--df-transition-fast), box-shadow var(--df-transition-fast);
+  outline: none;
+}
+.df-input:focus {
+  border-color: var(--df-primary);
+  box-shadow: 0 0 0 3px var(--df-ring);
+}
+.df-input::placeholder {
+  color: var(--color-neutral-400);
+}
+
+.df-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--df-space-3);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--df-radius-full);
+  line-height: 1.5;
+}
+
+.df-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px var(--df-space-3);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-primary-700);
+  background: var(--color-primary-50);
+  border-radius: var(--df-radius-full);
+  border: 1px solid var(--color-primary-100);
+}
+
+.df-divider {
+  border: none;
+  border-top: 1px solid var(--df-border);
+  margin: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-neutral-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-400); }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--df-background);
+    --color-foreground: var(--df-foreground);
+    --color-card: var(--df-card);
+    --color-card-foreground: var(--df-card-foreground);
+    --color-popover: var(--df-popover);
+    --color-popover-foreground: var(--df-popover-foreground);
+    --color-primary: var(--df-primary);
+    --color-primary-foreground: var(--df-primary-foreground);
+    --color-muted: var(--df-muted);
+    --color-muted-foreground: var(--df-muted-foreground);
+    --color-border: var(--df-border);
+    --color-input: var(--df-input);
+    --color-ring: var(--df-ring);
+    --radius-sm: var(--df-radius-sm);
+    --radius-md: var(--df-radius-md);
+    --radius-lg: var(--df-radius-lg);
+  }
+  @layer base {
+    body { background: var(--df-background); color: var(--df-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--df-background); }
+      .text-background { color: var(--df-background); }
+      .border-background { border-color: var(--df-background); }
+      .ring-background { --tw-ring-color: var(--df-background); }
+      .bg-foreground { background-color: var(--df-foreground); }
+      .text-foreground { color: var(--df-foreground); }
+      .border-foreground { border-color: var(--df-foreground); }
+      .ring-foreground { --tw-ring-color: var(--df-foreground); }
+      .bg-card { background-color: var(--df-card); }
+      .text-card { color: var(--df-card); }
+      .border-card { border-color: var(--df-card); }
+      .ring-card { --tw-ring-color: var(--df-card); }
+      .bg-card-foreground { background-color: var(--df-card-foreground); }
+      .text-card-foreground { color: var(--df-card-foreground); }
+      .border-card-foreground { border-color: var(--df-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--df-card-foreground); }
+      .bg-popover { background-color: var(--df-popover); }
+      .text-popover { color: var(--df-popover); }
+      .border-popover { border-color: var(--df-popover); }
+      .ring-popover { --tw-ring-color: var(--df-popover); }
+      .bg-popover-foreground { background-color: var(--df-popover-foreground); }
+      .text-popover-foreground { color: var(--df-popover-foreground); }
+      .border-popover-foreground { border-color: var(--df-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--df-popover-foreground); }
+      .bg-primary { background-color: var(--df-primary); }
+      .text-primary { color: var(--df-primary); }
+      .border-primary { border-color: var(--df-primary); }
+      .ring-primary { --tw-ring-color: var(--df-primary); }
+      .bg-primary-foreground { background-color: var(--df-primary-foreground); }
+      .text-primary-foreground { color: var(--df-primary-foreground); }
+      .border-primary-foreground { border-color: var(--df-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--df-primary-foreground); }
+      .bg-muted { background-color: var(--df-muted); }
+      .text-muted { color: var(--df-muted); }
+      .border-muted { border-color: var(--df-muted); }
+      .ring-muted { --tw-ring-color: var(--df-muted); }
+      .bg-muted-foreground { background-color: var(--df-muted-foreground); }
+      .text-muted-foreground { color: var(--df-muted-foreground); }
+      .border-muted-foreground { border-color: var(--df-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--df-muted-foreground); }
+      .bg-border { background-color: var(--df-border); }
+      .text-border { color: var(--df-border); }
+      .border-border { border-color: var(--df-border); }
+      .ring-border { --tw-ring-color: var(--df-border); }
+      .bg-input { background-color: var(--df-input); }
+      .text-input { color: var(--df-input); }
+      .border-input { border-color: var(--df-input); }
+      .ring-input { --tw-ring-color: var(--df-input); }
+      .bg-ring { background-color: var(--df-ring); }
+      .text-ring { color: var(--df-ring); }
+      .border-ring { border-color: var(--df-ring); }
+      .ring-ring { --tw-ring-color: var(--df-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body class="min-h-screen font-sans antialiased">
+    <main>
+    </main>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

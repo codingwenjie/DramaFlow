@@ -1,0 +1,2842 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>剧本工厂 - DramaFlow</title>
+    <style id="theme-vars">
+/* ============================================
+   DramaFlow Design System — Brand CSS
+   Indigo-Violet palette | Inter + PingFang SC
+   ============================================ */
+
+/* --- CSS Custom Properties --- */
+:root {
+  /* Brand scale — single primary hue (Indigo) */
+  --color-primary-50:  #EEF2FF;
+  --color-primary-100: #E0E7FF;
+  --color-primary-200: #C7D2FE;
+  --color-primary-300: #A5B4FC;
+  --color-primary-400: #818CF8;
+  --color-primary-500: #6366F1;
+  --color-primary-600: #4F46E5;
+  --color-primary-700: #4338CA;
+  --color-primary-800: #3730A3;
+  --color-primary-900: #312E81;
+
+  /* Neutral gray scale */
+  --color-neutral-50:  #F8F9FC;
+  --color-neutral-100: #F1F3F9;
+  --color-neutral-200: #E2E6EF;
+  --color-neutral-300: #C8CFDD;
+  --color-neutral-400: #9CA3B5;
+  --color-neutral-500: #6B7280;
+  --color-neutral-600: #4B5563;
+  --color-neutral-700: #374151;
+  --color-neutral-800: #1F2937;
+  --color-neutral-900: #1A1A2E;
+
+  /* State colors */
+  --state-success: #10B981;
+  --state-success-bg: #ECFDF5;
+  --state-warning: #F59E0B;
+  --state-warning-bg: #FFFBEB;
+  --state-error:   #EF4444;
+  --state-error-bg:   #FEF2F2;
+  --state-info:    #3B82F6;
+  --state-info-bg:    #EFF6FF;
+
+  /* Semantic aliases (mapped to primary + neutral) */
+  --df-background:        var(--color-neutral-50);
+  --df-foreground:        var(--color-neutral-900);
+  --df-card:              #FFFFFF;
+  --df-card-foreground:   var(--color-neutral-900);
+  --df-popover:           #FFFFFF;
+  --df-popover-foreground:var(--color-neutral-900);
+  --df-primary:           var(--color-primary-600);
+  --df-primary-foreground:#FFFFFF;
+  --df-primary-hover:     var(--color-primary-700);
+  --df-muted:             var(--color-neutral-500);
+  --df-muted-foreground:  var(--color-neutral-500);
+  --df-border:            var(--color-neutral-200);
+  --df-input:             var(--color-neutral-100);
+  --df-ring:              var(--color-primary-200);
+
+  /* Radius scale */
+  --df-radius-sm:   4px;
+  --df-radius-md:   8px;
+  --df-radius-lg:   12px;
+  --df-radius-full: 9999px;
+
+  /* Shadow tokens — static surfaces use border, only floating layers get elevation */
+  --df-shadow-card:    0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+  --df-shadow-hover:   0 4px 12px rgba(0,0,0,0.08);
+  --df-shadow-popover: 0 8px 32px rgba(0,0,0,0.12);
+  --df-shadow-modal:   0 16px 48px rgba(0,0,0,0.15);
+
+  /* Typography */
+  --df-font-sans:   'Inter', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  --df-font-mono:   'JetBrains Mono', 'SF Mono', 'Consolas', 'Monaco', monospace;
+
+  /* Spacing scale (4px grid) */
+  --df-space-1:  4px;
+  --df-space-2:  8px;
+  --df-space-3:  12px;
+  --df-space-4:  16px;
+  --df-space-5:  20px;
+  --df-space-6:  24px;
+  --df-space-8:  32px;
+  --df-space-10: 40px;
+  --df-space-12: 48px;
+  --df-space-16: 64px;
+
+  /* Layout */
+  --df-sidebar-width:   240px;
+  --df-topbar-height:   56px;
+  --df-content-max:     1200px;
+
+  /* Transitions */
+  --df-transition-fast:   150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --df-transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --df-transition-slow:   500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Base Typography --- */
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--df-foreground);
+  background: var(--df-background);
+}
+
+h1, .h1 { font-size: 28px; font-weight: 700; line-height: 1.3; letter-spacing: -0.02em; }
+h2, .h2 { font-size: 20px; font-weight: 700; line-height: 1.35; }
+h3, .h3 { font-size: 16px; font-weight: 600; line-height: 1.4; }
+h4, .h4 { font-size: 14px; font-weight: 600; line-height: 1.5; }
+
+.text-xs  { font-size: 12px; line-height: 1.5; }
+.text-sm  { font-size: 13px; line-height: 1.5; }
+.text-md  { font-size: 14px; line-height: 1.6; }
+.text-mono { font-family: var(--df-font-mono); font-size: 13px; }
+
+.text-muted  { color: var(--df-muted); }
+.text-primary { color: var(--df-primary); }
+
+/* --- Utility Classes --- */
+.df-card {
+  background: var(--df-card);
+  border: 1px solid var(--df-border);
+  border-radius: var(--df-radius-lg);
+  box-shadow: var(--df-shadow-card);
+  transition: box-shadow var(--df-transition-fast), transform var(--df-transition-fast);
+}
+.df-card:hover {
+  box-shadow: var(--df-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.df-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--df-space-2);
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--df-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--df-transition-fast);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.df-btn:focus-visible {
+  outline: 2px solid var(--df-ring);
+  outline-offset: 2px;
+}
+
+.df-btn-sm  { height: 36px; padding: 0 var(--df-space-4); font-size: 13px; }
+.df-btn-md  { height: 40px; padding: 0 var(--df-space-5); }
+.df-btn-lg  { height: 48px; padding: 0 var(--df-space-6); font-size: 16px; }
+
+.df-btn-primary {
+  background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500));
+  color: #FFFFFF;
+  border-color: transparent;
+}
+.df-btn-primary:hover {
+  background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-600));
+}
+
+.df-btn-secondary {
+  background: transparent;
+  color: var(--df-foreground);
+  border-color: var(--df-border);
+}
+.df-btn-secondary:hover {
+  background: var(--color-neutral-100);
+  border-color: var(--color-neutral-300);
+}
+
+.df-btn-ghost {
+  background: transparent;
+  color: var(--df-muted);
+  border-color: transparent;
+}
+.df-btn-ghost:hover {
+  background: var(--color-neutral-100);
+  color: var(--df-foreground);
+}
+
+.df-input {
+  height: 40px;
+  padding: 0 var(--df-space-4);
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  color: var(--df-foreground);
+  background: var(--df-card);
+  border: 1px solid var(--df-border);
+  border-radius: var(--df-radius-md);
+  transition: border-color var(--df-transition-fast), box-shadow var(--df-transition-fast);
+  outline: none;
+}
+.df-input:focus {
+  border-color: var(--df-primary);
+  box-shadow: 0 0 0 3px var(--df-ring);
+}
+.df-input::placeholder {
+  color: var(--color-neutral-400);
+}
+
+.df-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--df-space-3);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--df-radius-full);
+  line-height: 1.5;
+}
+
+.df-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px var(--df-space-3);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-primary-700);
+  background: var(--color-primary-50);
+  border-radius: var(--df-radius-full);
+  border: 1px solid var(--color-primary-100);
+}
+
+.df-divider {
+  border: none;
+  border-top: 1px solid var(--df-border);
+  margin: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-neutral-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-400); }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--df-background);
+    --color-foreground: var(--df-foreground);
+    --color-card: var(--df-card);
+    --color-card-foreground: var(--df-card-foreground);
+    --color-popover: var(--df-popover);
+    --color-popover-foreground: var(--df-popover-foreground);
+    --color-primary: var(--df-primary);
+    --color-primary-foreground: var(--df-primary-foreground);
+    --color-muted: var(--df-muted);
+    --color-muted-foreground: var(--df-muted-foreground);
+    --color-border: var(--df-border);
+    --color-input: var(--df-input);
+    --color-ring: var(--df-ring);
+    --radius-sm: var(--df-radius-sm);
+    --radius-md: var(--df-radius-md);
+    --radius-lg: var(--df-radius-lg);
+  }
+  @layer base {
+    body { background: var(--df-background); color: var(--df-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--df-background); }
+      .text-background { color: var(--df-background); }
+      .border-background { border-color: var(--df-background); }
+      .ring-background { --tw-ring-color: var(--df-background); }
+      .bg-foreground { background-color: var(--df-foreground); }
+      .text-foreground { color: var(--df-foreground); }
+      .border-foreground { border-color: var(--df-foreground); }
+      .ring-foreground { --tw-ring-color: var(--df-foreground); }
+      .bg-card { background-color: var(--df-card); }
+      .text-card { color: var(--df-card); }
+      .border-card { border-color: var(--df-card); }
+      .ring-card { --tw-ring-color: var(--df-card); }
+      .bg-card-foreground { background-color: var(--df-card-foreground); }
+      .text-card-foreground { color: var(--df-card-foreground); }
+      .border-card-foreground { border-color: var(--df-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--df-card-foreground); }
+      .bg-popover { background-color: var(--df-popover); }
+      .text-popover { color: var(--df-popover); }
+      .border-popover { border-color: var(--df-popover); }
+      .ring-popover { --tw-ring-color: var(--df-popover); }
+      .bg-popover-foreground { background-color: var(--df-popover-foreground); }
+      .text-popover-foreground { color: var(--df-popover-foreground); }
+      .border-popover-foreground { border-color: var(--df-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--df-popover-foreground); }
+      .bg-primary { background-color: var(--df-primary); }
+      .text-primary { color: var(--df-primary); }
+      .border-primary { border-color: var(--df-primary); }
+      .ring-primary { --tw-ring-color: var(--df-primary); }
+      .bg-primary-foreground { background-color: var(--df-primary-foreground); }
+      .text-primary-foreground { color: var(--df-primary-foreground); }
+      .border-primary-foreground { border-color: var(--df-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--df-primary-foreground); }
+      .bg-muted { background-color: var(--df-muted); }
+      .text-muted { color: var(--df-muted); }
+      .border-muted { border-color: var(--df-muted); }
+      .ring-muted { --tw-ring-color: var(--df-muted); }
+      .bg-muted-foreground { background-color: var(--df-muted-foreground); }
+      .text-muted-foreground { color: var(--df-muted-foreground); }
+      .border-muted-foreground { border-color: var(--df-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--df-muted-foreground); }
+      .bg-border { background-color: var(--df-border); }
+      .text-border { color: var(--df-border); }
+      .border-border { border-color: var(--df-border); }
+      .ring-border { --tw-ring-color: var(--df-border); }
+      .bg-input { background-color: var(--df-input); }
+      .text-input { color: var(--df-input); }
+      .border-input { border-color: var(--df-input); }
+      .ring-input { --tw-ring-color: var(--df-input); }
+      .bg-ring { background-color: var(--df-ring); }
+      .text-ring { color: var(--df-ring); }
+      .border-ring { border-color: var(--df-ring); }
+      .ring-ring { --tw-ring-color: var(--df-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body>
+  <div class="app-layout">
+
+    <!-- ========== SIDEBAR ========== -->
+    <aside class="sidebar" data-dom-id="sidebar">
+
+      <!-- Logo -->
+      <div class="sidebar-logo">
+        <svg class="sidebar-logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="logo-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#818CF8"/>
+              <stop offset="100%" stop-color="#4F46E5"/>
+            </linearGradient>
+          </defs>
+          <rect x="4" y="2" width="24" height="28" rx="4" fill="url(#logo-grad)"/>
+          <path d="M10 9h12M10 13h8M10 17h10M10 21h6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+          <path d="M22 22l3 3M25 22l-3 3" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span class="sidebar-logo-text">DramaFlow</span>
+      </div>
+
+      <!-- Navigation -->
+      <ul class="sidebar-nav" data-dom-id="sidebar-nav">
+        <li class="sidebar-nav-item" data-nav-key="dashboard" data-dom-id="nav-dashboard">
+          <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="6" height="6" rx="1"/>
+            <rect x="11" y="3" width="6" height="6" rx="1"/>
+            <rect x="3" y="11" width="6" height="6" rx="1"/>
+            <rect x="11" y="11" width="6" height="6" rx="1"/>
+          </svg>
+          <span>仪表盘</span>
+        </li>
+
+        <li class="sidebar-nav-item active" data-nav-key="script-factory">
+          <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 18V2h8l4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/>
+            <polyline points="12 2 12 6 16 6"/>
+            <line x1="8" y1="10" x2="12" y2="10"/>
+            <line x1="8" y1="13" x2="12" y2="13"/>
+            <line x1="8" y1="16" x2="10" y2="16"/>
+          </svg>
+          <span>剧本工厂</span>
+        </li>
+
+        <li class="sidebar-nav-item" data-nav-key="character-library" data-dom-id="nav-character-library">
+          <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7" cy="7" r="3"/>
+            <path d="M1 18v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/>
+            <circle cx="14" cy="7" r="3"/>
+            <path d="M14 12h3a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <span>角色资产库</span>
+        </li>
+
+        <li class="sidebar-nav-item" data-nav-key="storyboard" data-dom-id="nav-storyboard">
+          <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="7" height="7" rx="1"/>
+            <rect x="11" y="2" width="7" height="7" rx="1"/>
+            <rect x="2" y="11" width="7" height="7" rx="1"/>
+            <rect x="11" y="11" width="7" height="7" rx="1"/>
+          </svg>
+          <span>分镜工作台</span>
+        </li>
+
+        <li class="sidebar-nav-item" data-nav-key="video-generation" data-dom-id="nav-video-generation">
+          <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 15 10 5 17" fill="currentColor" stroke="none" opacity="0.7"/>
+            <polygon points="5 3 15 10 5 17" fill="none" stroke="currentColor"/>
+          </svg>
+          <span>视频生成</span>
+        </li>
+
+        <li class="sidebar-nav-item" data-nav-key="post-production" data-dom-id="nav-post-production">
+          <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="10" cy="10" r="7"/>
+            <circle cx="10" cy="10" r="3" fill="currentColor" stroke="none" opacity="0.5"/>
+            <line x1="10" y1="3" x2="10" y2="7"/>
+            <line x1="10" y1="13" x2="10" y2="17"/>
+            <line x1="3" y1="10" x2="7" y2="10"/>
+            <line x1="13" y1="10" x2="17" y2="10"/>
+          </svg>
+          <span>后期处理</span>
+        </li>
+      </ul>
+
+      <!-- User Area -->
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar">创</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name">创作者</div>
+          <div class="sidebar-user-role">Pro Plan</div>
+        </div>
+        <a class="sidebar-settings-link" href="#" title="设置" data-dom-id="sidebar-settings">
+          <svg class="sidebar-settings-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="8" cy="8" r="2.5"/>
+            <path d="M8 1.5v1.5M8 13v1.5M3.42 3.42l1.06 1.06M11.52 11.52l1.06 1.06M1.5 8H3M13 8h1.5M3.42 12.58l1.06-1.06M11.52 4.48l1.06-1.06"/>
+          </svg>
+        </a>
+      </div>
+
+    </aside>
+
+    <!-- ========== MAIN AREA ========== -->
+    <div class="main-area" data-dom-id="main-area">
+
+      <!-- Topbar -->
+      <header class="topbar" data-dom-id="topbar">
+        <div class="topbar-left">
+          <div class="topbar-breadcrumb">
+            <a href="#" class="topbar-breadcrumb-item" data-dom-id="breadcrumb-project">都市重生之逆袭人生</a>
+            <span class="topbar-breadcrumb-sep">&gt;</span>
+            <span class="topbar-breadcrumb-item current" data-dom-id="breadcrumb-current">剧本工厂</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <span class="topbar-page-title" data-dom-id="page-title">剧本工厂</span>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <main class="content" data-dom-id="content">
+
+        <!-- Page Header -->
+        <div class="sf-page-header">
+          <h1 class="sf-page-title">剧本工厂</h1>
+          <p class="sf-page-subtitle">使用 AI 智能创作工具，快速生成高质量短剧剧本</p>
+        </div>
+
+        <!-- Split Layout -->
+        <div class="sf-split" data-dom-id="sf-split">
+
+          <!-- ===== LEFT PANEL: Creation Panel ===== -->
+          <div class="sf-left-panel" data-dom-id="sf-left-panel">
+
+            <div class="sf-card sf-creation-card" data-dom-id="sf-creation-card">
+
+              <!-- Mode Tabs -->
+              <div class="sf-mode-tabs" data-dom-id="sf-mode-tabs">
+                <button class="sf-mode-tab active" data-dom-id="mode-tab-inspiration" data-mode="inspiration">灵感创作</button>
+                <button class="sf-mode-tab" data-dom-id="mode-tab-expand" data-mode="expand">梗概扩展</button>
+                <button class="sf-mode-tab" data-dom-id="mode-tab-import" data-mode="import">剧本导入</button>
+              </div>
+
+              <!-- Mode Panels -->
+              <div class="sf-mode-panels" data-dom-id="sf-mode-panels">
+
+                <!-- 灵感创作 Panel -->
+                <div class="sf-mode-panel active" data-dom-id="mode-panel-inspiration" data-mode="inspiration">
+                  <div class="sf-mode-body">
+                    <textarea
+                      class="sf-idea-textarea"
+                      data-dom-id="inspiration-textarea"
+                      placeholder="比如：一个都市女孩重生回到高考前一天，她决定改写自己的人生..."
+                    ></textarea>
+                  </div>
+                  <!-- Config Row -->
+                  <div class="sf-config-row" data-dom-id="inspiration-config-row">
+                    <div class="sf-config-item">
+                      <span class="sf-config-label">题材类型</span>
+                      <select class="sf-config-select" data-dom-id="config-genre">
+                        <option value="甜宠">甜宠</option>
+                        <option value="逆袭">逆袭</option>
+                        <option value="悬疑">悬疑</option>
+                        <option value="玄幻">玄幻</option>
+                        <option value="古装">古装</option>
+                        <option value="都市">都市</option>
+                      </select>
+                    </div>
+                    <div class="sf-config-item">
+                      <span class="sf-config-label">集数</span>
+                      <div class="sf-config-slider-group">
+                        <input
+                          type="range"
+                          class="sf-config-slider"
+                          data-dom-id="config-episodes-slider"
+                          min="10"
+                          max="100"
+                          value="30"
+                          step="5"
+                        />
+                        <span class="sf-config-slider-value" data-dom-id="config-episodes-value">30</span>
+                      </div>
+                    </div>
+                    <div class="sf-config-item">
+                      <span class="sf-config-label">每集时长</span>
+                      <select class="sf-config-select" data-dom-id="config-duration">
+                        <option value="1-3分钟" selected>1-3分钟</option>
+                        <option value="3-5分钟">3-5分钟</option>
+                        <option value="5-10分钟">5-10分钟</option>
+                      </select>
+                    </div>
+                    <div class="sf-config-item">
+                      <span class="sf-config-label">风格倾向</span>
+                      <select class="sf-config-select" data-dom-id="config-style">
+                        <option value="快节奏">快节奏</option>
+                        <option value="细腻情感">细腻情感</option>
+                        <option value="强反转">强反转</option>
+                      </select>
+                    </div>
+                  </div>
+                  <!-- Action Row -->
+                  <div class="sf-action-row">
+                    <button class="sf-btn-generate" data-dom-id="btn-generate-inspiration">
+                      <span class="sf-spinner"></span>
+                      <span class="sf-btn-text">生成剧本</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 梗概扩展 Panel -->
+                <div class="sf-mode-panel" data-dom-id="mode-panel-expand" data-mode="expand">
+                  <div class="sf-mode-body">
+                    <textarea
+                      class="sf-idea-textarea"
+                      data-dom-id="expand-textarea"
+                      placeholder="请在此粘贴或输入详细的故事梗概，AI 将根据梗概扩展为完整的剧本..."
+                    ></textarea>
+                  </div>
+                  <div class="sf-config-row" data-dom-id="expand-config-row">
+                    <div class="sf-config-item">
+                      <span class="sf-config-label">题材类型</span>
+                      <select class="sf-config-select" data-dom-id="expand-config-genre">
+                        <option value="甜宠">甜宠</option>
+                        <option value="逆袭">逆袭</option>
+                        <option value="悬疑">悬疑</option>
+                        <option value="玄幻">玄幻</option>
+                        <option value="古装">古装</option>
+                        <option value="都市">都市</option>
+                      </select>
+                    </div>
+                    <div class="sf-config-item">
+                      <span class="sf-config-label">集数</span>
+                      <div class="sf-config-slider-group">
+                        <input
+                          type="range"
+                          class="sf-config-slider"
+                          data-dom-id="expand-config-episodes-slider"
+                          min="10"
+                          max="100"
+                          value="30"
+                          step="5"
+                        />
+                        <span class="sf-config-slider-value" data-dom-id="expand-config-episodes-value">30</span>
+                      </div>
+                    </div>
+                    <div class="sf-config-item">
+                      <span class="sf-config-label">每集时长</span>
+                      <select class="sf-config-select" data-dom-id="expand-config-duration">
+                        <option value="1-3分钟" selected>1-3分钟</option>
+                        <option value="3-5分钟">3-5分钟</option>
+                        <option value="5-10分钟">5-10分钟</option>
+                      </select>
+                    </div>
+                    <div class="sf-config-item">
+                      <span class="sf-config-label">风格倾向</span>
+                      <select class="sf-config-select" data-dom-id="expand-config-style">
+                        <option value="快节奏">快节奏</option>
+                        <option value="细腻情感">细腻情感</option>
+                        <option value="强反转">强反转</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="sf-action-row">
+                    <button class="sf-btn-generate" data-dom-id="btn-generate-expand">
+                      <span class="sf-spinner"></span>
+                      <span class="sf-btn-text">生成剧本</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 剧本导入 Panel -->
+                <div class="sf-mode-panel" data-dom-id="mode-panel-import" data-mode="import">
+                  <div class="sf-mode-body">
+                    <div class="sf-upload-zone" data-dom-id="upload-zone">
+                      <svg class="sf-upload-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M24 32V16M16 24l8-8 8 8"/>
+                        <path d="M8 36v4a4 4 0 0 0 4 4h24a4 4 0 0 0 4-4v-4"/>
+                      </svg>
+                      <div class="sf-upload-title">点击或拖拽剧本文件到此处上传</div>
+                      <div class="sf-upload-hint">支持 .txt, .docx, .pdf, .fountain 格式</div>
+                    </div>
+                    <div class="sf-import-divider">或直接粘贴剧本内容</div>
+                    <textarea
+                      class="sf-paste-textarea"
+                      data-dom-id="paste-textarea"
+                      placeholder="在此粘贴剧本内容..."
+                    ></textarea>
+                  </div>
+                  <div class="sf-action-row">
+                    <button class="sf-btn-generate" data-dom-id="btn-import-parse">
+                      <span class="sf-spinner"></span>
+                      <span class="sf-btn-text">解析导入</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- ===== RIGHT PANEL: Script Preview ===== -->
+          <div class="sf-right-panel" data-dom-id="sf-right-panel">
+
+            <div class="sf-card sf-preview-card" data-dom-id="sf-preview-card">
+
+              <!-- Preview Header -->
+              <div class="sf-preview-header" data-dom-id="sf-preview-header">
+                <span class="sf-preview-title">剧本预览</span>
+                <span class="sf-preview-progress" data-dom-id="preview-progress">
+                  已生成 <strong>5</strong> / 30 集
+                </span>
+              </div>
+
+              <!-- Episode List -->
+              <div class="sf-episode-list" data-dom-id="episode-list">
+
+                <!-- Episode 1 - Locked -->
+                <div class="sf-episode-item locked" data-dom-id="episode-1" data-episode="1">
+                  <div class="sf-episode-header" data-dom-id="episode-header-1">
+                    <span class="sf-episode-num">01</span>
+                    <span class="sf-episode-title">重生之日</span>
+                    <span class="sf-episode-status locked">已锁定</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      清晨的阳光透过窗帘洒进卧室，林小雨从梦中惊醒。她发现自己回到了高三的教室，眼前是熟悉又陌生的黑板和课桌。墙上的日历显示：2024年6月6日，距离高考只剩一天。
+                    </div>
+                    <div class="sf-dialogue-block">
+                      <div class="sf-dialogue-char sf-char-1">林小雨（内心独白）</div>
+                      <div class="sf-dialogue-text">这怎么可能...我不是已经在公司加班到凌晨了吗？我明明已经三十岁了...</div>
+                    </div>
+                    <div class="sf-dialogue-block">
+                      <div class="sf-dialogue-char sf-char-2">同桌 张晨</div>
+                      <div class="sf-dialogue-text">小雨，你怎么了？脸色这么差，是不是昨晚又熬夜复习了？</div>
+                    </div>
+                    <div class="sf-narration">
+                      <div class="sf-narration-label">旁白</div>
+                      林小雨看着同桌张晨年轻的脸庞，心中百感交集。上一世，她因为高考失利，人生一路坎坷。这一次，她绝不会让历史重演。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-1">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M11 2l3 3-9 9H2v-3l9-9z"/>
+                        </svg>
+                        编辑
+                      </button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-1">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M2 8a6 6 0 0 1 10.47-4M14 8a6 6 0 0 1-10.47 4"/>
+                          <path d="M14 2v4h-4M2 14v-4h4"/>
+                        </svg>
+                        重新生成
+                      </button>
+                      <button class="sf-episode-action-btn lock-btn locked" data-dom-id="episode-action-lock-1">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="3" y="7" width="10" height="7" rx="1"/>
+                          <path d="M5 7V5a3 3 0 0 1 6 0v2"/>
+                        </svg>
+                        已锁定
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Episode 2 - Locked -->
+                <div class="sf-episode-item locked" data-dom-id="episode-2" data-episode="2">
+                  <div class="sf-episode-header" data-dom-id="episode-header-2">
+                    <span class="sf-episode-num">02</span>
+                    <span class="sf-episode-title">高考前的准备</span>
+                    <span class="sf-episode-status locked">已锁定</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      林小雨利用前世的记忆，快速翻阅课本，重点复习那些她记得会出现在试卷上的知识点。她的异常专注引起了班主任王老师的注意。
+                    </div>
+                    <div class="sf-dialogue-block">
+                      <div class="sf-dialogue-char sf-char-3">班主任 王老师</div>
+                      <div class="sf-dialogue-text">林小雨，你今天状态很好啊，继续保持！老师相信你一定能考出好成绩。</div>
+                    </div>
+                    <div class="sf-dialogue-block">
+                      <div class="sf-dialogue-char sf-char-1">林小雨</div>
+                      <div class="sf-dialogue-text">谢谢王老师，这次我一定会全力以赴的。</div>
+                    </div>
+                    <div class="sf-narration">
+                      <div class="sf-narration-label">旁白</div>
+                      林小雨知道，改变命运的第一步，就是明天的考试。她握紧拳头，眼中闪烁着坚定的光芒。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-2">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M11 2l3 3-9 9H2v-3l9-9z"/>
+                        </svg>
+                        编辑
+                      </button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-2">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M2 8a6 6 0 0 1 10.47-4M14 8a6 6 0 0 1-10.47 4"/>
+                          <path d="M14 2v4h-4M2 14v-4h4"/>
+                        </svg>
+                        重新生成
+                      </button>
+                      <button class="sf-episode-action-btn lock-btn locked" data-dom-id="episode-action-lock-2">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="3" y="7" width="10" height="7" rx="1"/>
+                          <path d="M5 7V5a3 3 0 0 1 6 0v2"/>
+                        </svg>
+                        已锁定
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Episode 3 - Locked -->
+                <div class="sf-episode-item locked" data-dom-id="episode-3" data-episode="3">
+                  <div class="sf-episode-header" data-dom-id="episode-header-3">
+                    <span class="sf-episode-num">03</span>
+                    <span class="sf-episode-title">考场风云</span>
+                    <span class="sf-episode-status locked">已锁定</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      高考第一天，考场内气氛紧张。林小雨沉着冷静地答题，前世的记忆让她对每一道题都胸有成竹。
+                    </div>
+                    <div class="sf-dialogue-block">
+                      <div class="sf-dialogue-char sf-char-1">林小雨（内心独白）</div>
+                      <div class="sf-dialogue-text">这些题目...和记忆中一模一样。这一次，我不会再犯同样的错误。</div>
+                    </div>
+                    <div class="sf-dialogue-block">
+                      <div class="sf-dialogue-char sf-char-4">监考老师</div>
+                      <div class="sf-dialogue-text">还有十五分钟，请各位同学检查试卷。</div>
+                    </div>
+                    <div class="sf-narration">
+                      <div class="sf-narration-label">旁白</div>
+                      林小雨提前完成了试卷，她望向窗外，阳光正好。这一次，命运的天平终于向她倾斜了。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-3">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M11 2l3 3-9 9H2v-3l9-9z"/>
+                        </svg>
+                        编辑
+                      </button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-3">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M2 8a6 6 0 0 1 10.47-4M14 8a6 6 0 0 1-10.47 4"/>
+                          <path d="M14 2v4h-4M2 14v-4h4"/>
+                        </svg>
+                        重新生成
+                      </button>
+                      <button class="sf-episode-action-btn lock-btn locked" data-dom-id="episode-action-lock-3">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="3" y="7" width="10" height="7" rx="1"/>
+                          <path d="M5 7V5a3 3 0 0 1 6 0v2"/>
+                        </svg>
+                        已锁定
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Episode 4 - Generated -->
+                <div class="sf-episode-item" data-dom-id="episode-4" data-episode="4">
+                  <div class="sf-episode-header" data-dom-id="episode-header-4">
+                    <span class="sf-episode-num">04</span>
+                    <span class="sf-episode-title">命运的转折</span>
+                    <span class="sf-episode-status generated">已生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      高考结束的铃声响起，林小雨放下笔，长长地舒了一口气。走出考场，她看到了在校门口焦急等待的母亲。
+                    </div>
+                    <div class="sf-dialogue-block">
+                      <div class="sf-dialogue-char sf-char-2">母亲 陈芳</div>
+                      <div class="sf-dialogue-text">小雨，考得怎么样？别紧张，不管结果如何，妈妈都支持你。</div>
+                    </div>
+                    <div class="sf-dialogue-block">
+                      <div class="sf-dialogue-char sf-char-1">林小雨</div>
+                      <div class="sf-dialogue-text">妈，这次不一样了。我感觉特别好。</div>
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-4">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M11 2l3 3-9 9H2v-3l9-9z"/>
+                        </svg>
+                        编辑
+                      </button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-4">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M2 8a6 6 0 0 1 10.47-4M14 8a6 6 0 0 1-10.47 4"/>
+                          <path d="M14 2v4h-4M2 14v-4h4"/>
+                        </svg>
+                        重新生成
+                      </button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-4">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="3" y="7" width="10" height="7" rx="1"/>
+                          <path d="M5 7V5a3 3 0 0 1 6 0v2"/>
+                        </svg>
+                        锁定
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Episode 5 - Generated -->
+                <div class="sf-episode-item" data-dom-id="episode-5" data-episode="5">
+                  <div class="sf-episode-header" data-dom-id="episode-header-5">
+                    <span class="sf-episode-num">05</span>
+                    <span class="sf-episode-title">金榜题名</span>
+                    <span class="sf-episode-status generated">已生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      查分当天，林小雨的手微微颤抖。当屏幕上显示出远超预期的分数时，她喜极而泣。
+                    </div>
+                    <div class="sf-dialogue-block">
+                      <div class="sf-dialogue-char sf-char-1">林小雨</div>
+                      <div class="sf-dialogue-text">我做到了...我真的做到了！</div>
+                    </div>
+                    <div class="sf-dialogue-block">
+                      <div class="sf-dialogue-char sf-char-2">母亲 陈芳</div>
+                      <div class="sf-dialogue-text">我的女儿太棒了！妈妈为你骄傲！（激动地抱住小雨）</div>
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-5">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M11 2l3 3-9 9H2v-3l9-9z"/>
+                        </svg>
+                        编辑
+                      </button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-5">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M2 8a6 6 0 0 1 10.47-4M14 8a6 6 0 0 1-10.47 4"/>
+                          <path d="M14 2v4h-4M2 14v-4h4"/>
+                        </svg>
+                        重新生成
+                      </button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-5">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="3" y="7" width="10" height="7" rx="1"/>
+                          <path d="M5 7V5a3 3 0 0 1 6 0v2"/>
+                        </svg>
+                        锁定
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Episodes 6-30 - Pending (generate dynamically) -->
+                <div class="sf-episode-item" data-dom-id="episode-6" data-episode="6">
+                  <div class="sf-episode-header" data-dom-id="episode-header-6">
+                    <span class="sf-episode-num">06</span>
+                    <span class="sf-episode-title">新的开始</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-6">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M11 2l3 3-9 9H2v-3l9-9z"/>
+                        </svg>
+                        编辑
+                      </button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-6">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M2 8a6 6 0 0 1 10.47-4M14 8a6 6 0 0 1-10.47 4"/>
+                          <path d="M14 2v4h-4M2 14v-4h4"/>
+                        </svg>
+                        重新生成
+                      </button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-6">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="3" y="7" width="10" height="7" rx="1"/>
+                          <path d="M5 7V5a3 3 0 0 1 6 0v2"/>
+                        </svg>
+                        锁定
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-7" data-episode="7">
+                  <div class="sf-episode-header" data-dom-id="episode-header-7">
+                    <span class="sf-episode-num">07</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-7">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M11 2l3 3-9 9H2v-3l9-9z"/>
+                        </svg>
+                        编辑
+                      </button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-7">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M2 8a6 6 0 0 1 10.47-4M14 8a6 6 0 0 1-10.47 4"/>
+                          <path d="M14 2v4h-4M2 14v-4h4"/>
+                        </svg>
+                        重新生成
+                      </button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-7">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="3" y="7" width="10" height="7" rx="1"/>
+                          <path d="M5 7V5a3 3 0 0 1 6 0v2"/>
+                        </svg>
+                        锁定
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-8" data-episode="8">
+                  <div class="sf-episode-header" data-dom-id="episode-header-8">
+                    <span class="sf-episode-num">08</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-8">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M11 2l3 3-9 9H2v-3l9-9z"/>
+                        </svg>
+                        编辑
+                      </button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-8">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M2 8a6 6 0 0 1 10.47-4M14 8a6 6 0 0 1-10.47 4"/>
+                          <path d="M14 2v4h-4M2 14v-4h4"/>
+                        </svg>
+                        重新生成
+                      </button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-8">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="3" y="7" width="10" height="7" rx="1"/>
+                          <path d="M5 7V5a3 3 0 0 1 6 0v2"/>
+                        </svg>
+                        锁定
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Episodes 9-30 condensed for scroll feel -->
+                <div class="sf-episode-item" data-dom-id="episode-9" data-episode="9">
+                  <div class="sf-episode-header" data-dom-id="episode-header-9">
+                    <span class="sf-episode-num">09</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-9">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M11 2l3 3-9 9H2v-3l9-9z"/>
+                        </svg>
+                        编辑
+                      </button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-9">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M2 8a6 6 0 0 1 10.47-4M14 8a6 6 0 0 1-10.47 4"/>
+                          <path d="M14 2v4h-4M2 14v-4h4"/>
+                        </svg>
+                        重新生成
+                      </button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-9">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="3" y="7" width="10" height="7" rx="1"/>
+                          <path d="M5 7V5a3 3 0 0 1 6 0v2"/>
+                        </svg>
+                        锁定
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-10" data-episode="10">
+                  <div class="sf-episode-header" data-dom-id="episode-header-10">
+                    <span class="sf-episode-num">10</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-10">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M11 2l3 3-9 9H2v-3l9-9z"/>
+                        </svg>
+                        编辑
+                      </button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-10">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M2 8a6 6 0 0 1 10.47-4M14 8a6 6 0 0 1-10.47 4"/>
+                          <path d="M14 2v4h-4M2 14v-4h4"/>
+                        </svg>
+                        重新生成
+                      </button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-10">
+                        <svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                          <rect x="3" y="7" width="10" height="7" rx="1"/>
+                          <path d="M5 7V5a3 3 0 0 1 6 0v2"/>
+                        </svg>
+                        锁定
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Episodes 11-30 simplified -->
+                <div class="sf-episode-item" data-dom-id="episode-11" data-episode="11">
+                  <div class="sf-episode-header" data-dom-id="episode-header-11">
+                    <span class="sf-episode-num">11</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-11">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-11">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-11">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-12" data-episode="12">
+                  <div class="sf-episode-header" data-dom-id="episode-header-12">
+                    <span class="sf-episode-num">12</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-12">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-12">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-12">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-13" data-episode="13">
+                  <div class="sf-episode-header" data-dom-id="episode-header-13">
+                    <span class="sf-episode-num">13</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-13">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-13">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-13">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-14" data-episode="14">
+                  <div class="sf-episode-header" data-dom-id="episode-header-14">
+                    <span class="sf-episode-num">14</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-14">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-14">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-14">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-15" data-episode="15">
+                  <div class="sf-episode-header" data-dom-id="episode-header-15">
+                    <span class="sf-episode-num">15</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-15">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-15">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-15">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Episodes 16-30 as minimal items -->
+                <div class="sf-episode-item" data-dom-id="episode-16" data-episode="16">
+                  <div class="sf-episode-header" data-dom-id="episode-header-16">
+                    <span class="sf-episode-num">16</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-16">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-16">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-16">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-17" data-episode="17">
+                  <div class="sf-episode-header" data-dom-id="episode-header-17">
+                    <span class="sf-episode-num">17</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-17">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-17">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-17">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-18" data-episode="18">
+                  <div class="sf-episode-header" data-dom-id="episode-header-18">
+                    <span class="sf-episode-num">18</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-18">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-18">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-18">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-19" data-episode="19">
+                  <div class="sf-episode-header" data-dom-id="episode-header-19">
+                    <span class="sf-episode-num">19</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-19">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-19">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-19">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-20" data-episode="20">
+                  <div class="sf-episode-header" data-dom-id="episode-header-20">
+                    <span class="sf-episode-num">20</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-20">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-20">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-20">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-21" data-episode="21">
+                  <div class="sf-episode-header" data-dom-id="episode-header-21">
+                    <span class="sf-episode-num">21</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-21">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-21">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-21">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-22" data-episode="22">
+                  <div class="sf-episode-header" data-dom-id="episode-header-22">
+                    <span class="sf-episode-num">22</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-22">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-22">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-22">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-23" data-episode="23">
+                  <div class="sf-episode-header" data-dom-id="episode-header-23">
+                    <span class="sf-episode-num">23</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-23">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-23">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-23">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-24" data-episode="24">
+                  <div class="sf-episode-header" data-dom-id="episode-header-24">
+                    <span class="sf-episode-num">24</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-24">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-24">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-24">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-25" data-episode="25">
+                  <div class="sf-episode-header" data-dom-id="episode-header-25">
+                    <span class="sf-episode-num">25</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-25">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-25">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-25">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-26" data-episode="26">
+                  <div class="sf-episode-header" data-dom-id="episode-header-26">
+                    <span class="sf-episode-num">26</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-26">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-26">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-26">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-27" data-episode="27">
+                  <div class="sf-episode-header" data-dom-id="episode-header-27">
+                    <span class="sf-episode-num">27</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-27">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-27">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-27">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-28" data-episode="28">
+                  <div class="sf-episode-header" data-dom-id="episode-header-28">
+                    <span class="sf-episode-num">28</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-28">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-28">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-28">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-29" data-episode="29">
+                  <div class="sf-episode-header" data-dom-id="episode-header-29">
+                    <span class="sf-episode-num">29</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-29">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-29">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-29">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sf-episode-item" data-dom-id="episode-30" data-episode="30">
+                  <div class="sf-episode-header" data-dom-id="episode-header-30">
+                    <span class="sf-episode-num">30</span>
+                    <span class="sf-episode-title">待创作</span>
+                    <span class="sf-episode-status pending">待生成</span>
+                    <svg class="sf-episode-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="4 6 8 10 12 6"/>
+                    </svg>
+                  </div>
+                  <div class="sf-episode-detail">
+                    <div class="sf-scene-desc">
+                      <div class="sf-scene-desc-label">场景描述</div>
+                      剧本尚未生成，请在左侧面板中创建或生成剧本内容。
+                    </div>
+                    <div class="sf-episode-actions">
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-edit-30">编辑</button>
+                      <button class="sf-episode-action-btn" data-dom-id="episode-action-regenerate-30">重新生成</button>
+                      <button class="sf-episode-action-btn lock-btn" data-dom-id="episode-action-lock-30">锁定</button>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Bottom Spacer -->
+        <div class="sf-content-bottom-spacer"></div>
+
+      </main>
+
+    </div>
+
+  </div>
+
+  <!-- ========== BOTTOM TOOLBAR ========== -->
+  <div class="sf-bottom-toolbar" data-dom-id="bottom-toolbar">
+    <div class="sf-bottom-toolbar-left">
+      <div class="sf-bottom-progress" data-dom-id="bottom-progress">
+        <span>已锁定</span>
+        <strong data-dom-id="bottom-locked-count">0</strong>
+        <span>/</span>
+        <strong>30</strong>
+        <span>集</span>
+        <div class="sf-progress-bar" data-dom-id="bottom-progress-bar">
+          <div class="sf-progress-bar-fill" data-dom-id="bottom-progress-fill" style="width: 0%;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="sf-bottom-toolbar-right">
+      <button class="sf-btn-toolbar-secondary" data-dom-id="btn-export-script">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 10v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3"/>
+          <line x1="8" y1="2" x2="8" y2="11"/>
+          <polyline points="5 7 8 10 11 7"/>
+        </svg>
+        导出剧本
+      </button>
+      <button class="sf-btn-toolbar-primary" data-dom-id="btn-lock-all-next">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="7" width="10" height="7" rx="1"/>
+          <path d="M5 7V5a3 3 0 0 1 6 0v2"/>
+          <line x1="8" y1="10" x2="8" y2="12"/>
+        </svg>
+        全部锁定并进入下一步
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Page Scripts ===== -->
+  <script>
+    (function() {
+      // ---- Mode Tab Switching ----
+      const modeTabs = document.querySelectorAll('.sf-mode-tab');
+      const modePanels = document.querySelectorAll('.sf-mode-panel');
+
+      modeTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+          const mode = this.dataset.mode;
+          modeTabs.forEach(t => t.classList.remove('active'));
+          modePanels.forEach(p => p.classList.remove('active'));
+          this.classList.add('active');
+          const panel = document.querySelector(`.sf-mode-panel[data-mode="${mode}"]`);
+          if (panel) panel.classList.add('active');
+        });
+      });
+
+      // ---- Episode Slider Sync ----
+      const sliderSyncPairs = [
+        { slider: 'config-episodes-slider', value: 'config-episodes-value' },
+        { slider: 'expand-config-episodes-slider', value: 'expand-config-episodes-value' }
+      ];
+
+      sliderSyncPairs.forEach(pair => {
+        const slider = document.querySelector(`[data-dom-id="${pair.slider}"]`);
+        const valueEl = document.querySelector(`[data-dom-id="${pair.value}"]`);
+        if (slider && valueEl) {
+          slider.addEventListener('input', function() {
+            valueEl.textContent = this.value;
+          });
+        }
+      });
+
+      // ---- Episode Expand/Collapse ----
+      const episodeHeaders = document.querySelectorAll('[data-dom-id^="episode-header-"]');
+
+      episodeHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+          const episodeItem = this.closest('.sf-episode-item');
+          if (episodeItem) {
+            const wasExpanded = episodeItem.classList.contains('expanded');
+            // Close all other expanded episodes
+            document.querySelectorAll('.sf-episode-item.expanded').forEach(item => {
+              item.classList.remove('expanded');
+            });
+            // Toggle current
+            if (!wasExpanded) {
+              episodeItem.classList.add('expanded');
+            }
+          }
+        });
+      });
+
+      // ---- Generate Button Loading State ----
+      const generateButtons = document.querySelectorAll('.sf-btn-generate');
+      generateButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+          if (this.classList.contains('loading')) return;
+          this.classList.add('loading');
+          this.disabled = true;
+
+          // Simulate loading for 2 seconds
+          setTimeout(() => {
+            this.classList.remove('loading');
+            this.disabled = false;
+          }, 2000);
+        });
+      });
+
+      // ---- Upload Zone Click ----
+      const uploadZone = document.querySelector('[data-dom-id="upload-zone"]');
+      if (uploadZone) {
+        uploadZone.addEventListener('click', function() {
+          // Simulate file input trigger
+          console.log('Upload zone clicked - file dialog would open');
+        });
+
+        uploadZone.addEventListener('dragover', function(e) {
+          e.preventDefault();
+          this.style.borderColor = 'var(--df-primary)';
+          this.style.background = 'var(--color-primary-50)';
+        });
+
+        uploadZone.addEventListener('dragleave', function() {
+          this.style.borderColor = '';
+          this.style.background = '';
+        });
+
+        uploadZone.addEventListener('drop', function(e) {
+          e.preventDefault();
+          this.style.borderColor = '';
+          this.style.background = '';
+          console.log('File dropped - would process upload');
+        });
+      }
+
+      // ---- Lock All & Next ----
+      const btnLockAll = document.querySelector('[data-dom-id="btn-lock-all-next"]');
+      if (btnLockAll) {
+        btnLockAll.addEventListener('click', function() {
+          console.log('Lock all episodes and proceed to next step');
+        });
+      }
+
+      // ---- Export Script ----
+      const btnExport = document.querySelector('[data-dom-id="btn-export-script"]');
+      if (btnExport) {
+        btnExport.addEventListener('click', function() {
+          console.log('Export script triggered');
+        });
+      }
+
+      // ---- Episode Lock Buttons ----
+      document.querySelectorAll('.lock-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const episodeItem = this.closest('.sf-episode-item');
+          if (episodeItem) {
+            const isLocked = episodeItem.classList.contains('locked');
+            if (isLocked) {
+              episodeItem.classList.remove('locked');
+              const statusBadge = episodeItem.querySelector('.sf-episode-status');
+              if (statusBadge) {
+                statusBadge.classList.remove('locked');
+                statusBadge.classList.add('generated');
+                statusBadge.textContent = '已生成';
+              }
+              this.innerHTML = '<svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="7" rx="1"/><path d="M5 7V5a3 3 0 0 1 6 0v2"/></svg> 锁定';
+            } else {
+              episodeItem.classList.add('locked');
+              const statusBadge = episodeItem.querySelector('.sf-episode-status');
+              if (statusBadge) {
+                statusBadge.classList.remove('generated', 'pending');
+                statusBadge.classList.add('locked');
+                statusBadge.textContent = '已锁定';
+              }
+              this.innerHTML = '<svg class="sf-episode-action-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="10" height="7" rx="1"/><path d="M5 7V5a3 3 0 0 1 6 0v2"/></svg> 已锁定';
+            }
+            updateBottomProgress();
+          }
+        });
+      });
+
+      // ---- Update Bottom Progress ----
+      function updateBottomProgress() {
+        const totalEpisodes = document.querySelectorAll('.sf-episode-item').length;
+        const lockedEpisodes = document.querySelectorAll('.sf-episode-item.locked').length;
+        const lockedCountEl = document.querySelector('[data-dom-id="bottom-locked-count"]');
+        const progressFill = document.querySelector('[data-dom-id="bottom-progress-fill"]');
+        if (lockedCountEl) {
+          lockedCountEl.textContent = lockedEpisodes;
+        }
+        if (progressFill) {
+          const percentage = totalEpisodes > 0 ? (lockedEpisodes / totalEpisodes) * 100 : 0;
+          progressFill.style.width = percentage + '%';
+        }
+      }
+
+      // Initialize progress
+      updateBottomProgress();
+
+    })();
+  </script>
+
+
+    <style>
+    /* ===== CSS Variables (Brand System) ===== */
+    :root {
+      --df-sidebar-width: 240px;
+      --df-topbar-height: 56px;
+      --df-primary: #4F46E5;
+      --df-background: #F8F9FC;
+      --df-foreground: #1E1E2E;
+      --df-card: #FFFFFF;
+      --df-border: #E5E7EB;
+      --df-muted: #9CA3AF;
+      --df-font-sans: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+      --df-space-xs: 4px;
+      --df-space-sm: 8px;
+      --df-space-md: 16px;
+      --df-space-lg: 24px;
+      --df-space-xl: 32px;
+      --df-radius-sm: 6px;
+      --df-radius-md: 8px;
+      --df-radius-lg: 12px;
+      --df-transition-fast: 150ms ease;
+      --color-neutral-900: #1A1A2E;
+      --color-primary-600: #4F46E5;
+      --color-primary-50: #EEF2FF;
+    }
+
+    /* ===== Reset & Base ===== */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--df-font-sans);
+      background: var(--df-background);
+      color: var(--df-foreground);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ===== App Layout ===== */
+    .app-layout {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== Sidebar ===== */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: var(--df-sidebar-width);
+      background: var(--color-neutral-900);
+      color: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .sidebar::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-sm);
+      padding: var(--df-space-lg) var(--df-space-md);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar-logo-icon {
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, #818CF8 0%, #4F46E5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: var(--df-space-sm) 0;
+      list-style: none;
+    }
+
+    .sidebar-nav-item {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-sm);
+      padding: var(--df-space-sm) var(--df-space-md);
+      margin: 2px var(--df-space-sm);
+      border-radius: var(--df-radius-sm);
+      font-size: 14px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.7);
+      cursor: pointer;
+      transition: background var(--df-transition-fast), color var(--df-transition-fast), border var(--df-transition-fast);
+      border-left: 3px solid transparent;
+      text-decoration: none;
+      user-select: none;
+    }
+
+    .sidebar-nav-item:hover {
+      background: rgba(255,255,255,0.08);
+      color: #FFFFFF;
+    }
+
+    .sidebar-nav-item.active {
+      background: rgba(99,102,241,0.15);
+      color: #FFFFFF;
+      border-left-color: var(--color-primary-600);
+      font-weight: 500;
+    }
+
+    .sidebar-nav-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    .sidebar-nav-item.active .sidebar-nav-icon,
+    .sidebar-nav-item:hover .sidebar-nav-icon {
+      opacity: 1;
+    }
+
+    .sidebar-user {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-sm);
+      padding: var(--df-space-md);
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar-user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366F1 0%, #A78BFA 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .sidebar-user-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sidebar-user-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #FFFFFF;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-user-role {
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+    }
+
+    .sidebar-settings-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--df-radius-sm);
+      color: rgba(255,255,255,0.45);
+      transition: background var(--df-transition-fast), color var(--df-transition-fast);
+      cursor: pointer;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .sidebar-settings-link:hover {
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.8);
+    }
+
+    .sidebar-settings-icon {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ===== Main Area ===== */
+    .main-area {
+      margin-left: var(--df-sidebar-width);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== Topbar ===== */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: var(--df-topbar-height);
+      background: var(--df-card);
+      border-bottom: 1px solid var(--df-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--df-space-lg);
+      flex-shrink: 0;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-xs);
+      font-size: 13px;
+      color: var(--df-muted);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-md);
+    }
+
+    /* ===== Content ===== */
+    .content {
+      flex: 1;
+      overflow: hidden;
+      background: var(--df-background);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .content::-webkit-scrollbar {
+      width: 6px;
+    }
+    .content::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.12);
+      border-radius: 3px;
+    }
+
+    /* ==========================================
+       Script Factory Page Specific Styles
+    ========================================== */
+
+    /* ---- Page Header ---- */
+    .sf-page-header {
+      padding: var(--df-space-lg) var(--df-space-lg) var(--df-space-md);
+      flex-shrink: 0;
+    }
+
+    .sf-page-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--df-foreground);
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    .sf-page-subtitle {
+      font-size: 13px;
+      color: var(--df-muted);
+    }
+
+    /* ---- Split Layout ---- */
+    .sf-split {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      padding: 0 var(--df-space-lg) var(--df-space-lg);
+      gap: var(--df-space-lg);
+    }
+
+    .sf-left-panel {
+      flex: 6;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .sf-right-panel {
+      flex: 4;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    /* ---- Card Base ---- */
+    .sf-card {
+      background: var(--df-card);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-lg);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sf-card-header {
+      padding: var(--df-space-md) var(--df-space-lg);
+      border-bottom: 1px solid var(--df-border);
+      flex-shrink: 0;
+    }
+
+    .sf-card-body {
+      padding: var(--df-space-lg);
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .sf-card-body::-webkit-scrollbar {
+      width: 5px;
+    }
+    .sf-card-body::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.1);
+      border-radius: 3px;
+    }
+
+    /* ---- Left Panel: Creation Card ---- */
+    .sf-creation-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- Mode Tabs ---- */
+    .sf-mode-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--df-border);
+      padding: 0 var(--df-space-lg);
+      flex-shrink: 0;
+    }
+
+    .sf-mode-tab {
+      padding: var(--df-space-3) var(--df-space-5);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--df-muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all var(--df-transition-fast);
+      white-space: nowrap;
+      user-select: none;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+      font-family: inherit;
+    }
+
+    .sf-mode-tab:hover {
+      color: var(--df-foreground);
+    }
+
+    .sf-mode-tab.active {
+      color: var(--df-primary);
+      border-bottom-color: var(--df-primary);
+    }
+
+    /* ---- Mode Panels ---- */
+    .sf-mode-panels {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sf-mode-panel {
+      display: none;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .sf-mode-panel.active {
+      display: flex;
+    }
+
+    .sf-mode-body {
+      flex: 1;
+      padding: var(--df-space-lg);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    /* ---- Inspiration Textarea ---- */
+    .sf-idea-textarea {
+      width: 100%;
+      flex: 1;
+      min-height: 180px;
+      padding: var(--df-space-md);
+      font-family: var(--df-font-sans);
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--df-foreground);
+      background: var(--color-neutral-50);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-md);
+      resize: none;
+      outline: none;
+      transition: border-color var(--df-transition-fast), box-shadow var(--df-transition-fast);
+    }
+
+    .sf-idea-textarea:focus {
+      border-color: var(--df-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-50);
+    }
+
+    .sf-idea-textarea::placeholder {
+      color: var(--color-neutral-400);
+    }
+
+    /* ---- Config Row ---- */
+    .sf-config-row {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-md);
+      padding: var(--df-space-md) var(--df-space-lg);
+      background: var(--color-neutral-50);
+      border-top: 1px solid var(--df-border);
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+
+    .sf-config-item {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-2);
+    }
+
+    .sf-config-label {
+      font-size: 12px;
+      color: var(--df-muted);
+      white-space: nowrap;
+      font-weight: 500;
+    }
+
+    .sf-config-select {
+      height: 34px;
+      padding: 0 var(--df-space-3);
+      font-family: var(--df-font-sans);
+      font-size: 13px;
+      color: var(--df-foreground);
+      background: var(--df-card);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-sm);
+      outline: none;
+      cursor: pointer;
+      transition: border-color var(--df-transition-fast);
+      min-width: 100px;
+    }
+
+    .sf-config-select:focus {
+      border-color: var(--df-primary);
+    }
+
+    .sf-config-slider-group {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-2);
+    }
+
+    .sf-config-slider {
+      width: 80px;
+      accent-color: var(--df-primary);
+      cursor: pointer;
+    }
+
+    .sf-config-slider-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--df-primary);
+      min-width: 28px;
+      text-align: center;
+    }
+
+    /* ---- Action Row ---- */
+    .sf-action-row {
+      padding: var(--df-space-md) var(--df-space-lg);
+      border-top: 1px solid var(--df-border);
+      flex-shrink: 0;
+    }
+
+    .sf-btn-generate {
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--df-space-2);
+      height: 48px;
+      font-family: var(--df-font-sans);
+      font-size: 16px;
+      font-weight: 600;
+      color: #FFFFFF;
+      background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500));
+      border: none;
+      border-radius: var(--df-radius-md);
+      cursor: pointer;
+      transition: all var(--df-transition-fast);
+    }
+
+    .sf-btn-generate:hover {
+      background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-600));
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+    }
+
+    .sf-btn-generate:active {
+      transform: translateY(0);
+    }
+
+    .sf-btn-generate:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .sf-btn-generate.loading {
+      pointer-events: none;
+      opacity: 0.8;
+    }
+
+    .sf-spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #FFFFFF;
+      border-radius: 50%;
+      animation: sf-spin 0.6s linear infinite;
+    }
+
+    .sf-btn-generate.loading .sf-spinner {
+      display: block;
+    }
+
+    .sf-btn-generate.loading .sf-btn-text {
+      opacity: 0.7;
+    }
+
+    @keyframes sf-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ---- Upload Zone ---- */
+    .sf-upload-zone {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+      border: 2px dashed var(--color-neutral-300);
+      border-radius: var(--df-radius-lg);
+      background: var(--color-neutral-50);
+      cursor: pointer;
+      transition: all var(--df-transition-fast);
+      padding: var(--df-space-xl);
+      text-align: center;
+    }
+
+    .sf-upload-zone:hover {
+      border-color: var(--df-primary);
+      background: var(--color-primary-50);
+    }
+
+    .sf-upload-icon {
+      width: 48px;
+      height: 48px;
+      color: var(--color-neutral-400);
+      margin-bottom: var(--df-space-md);
+      transition: color var(--df-transition-fast);
+    }
+
+    .sf-upload-zone:hover .sf-upload-icon {
+      color: var(--df-primary);
+    }
+
+    .sf-upload-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--df-foreground);
+      margin-bottom: var(--df-space-1);
+    }
+
+    .sf-upload-hint {
+      font-size: 12px;
+      color: var(--df-muted);
+    }
+
+    .sf-import-divider {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-3);
+      margin: var(--df-space-lg) 0;
+      color: var(--df-muted);
+      font-size: 12px;
+    }
+
+    .sf-import-divider::before,
+    .sf-import-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--df-border);
+    }
+
+    .sf-paste-textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: var(--df-space-md);
+      font-family: var(--df-font-sans);
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--df-foreground);
+      background: var(--color-neutral-50);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-md);
+      resize: vertical;
+      outline: none;
+      transition: border-color var(--df-transition-fast);
+    }
+
+    .sf-paste-textarea:focus {
+      border-color: var(--df-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-50);
+    }
+
+    .sf-paste-textarea::placeholder {
+      color: var(--color-neutral-400);
+    }
+
+    /* ---- Right Panel: Script Preview ---- */
+    .sf-preview-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sf-preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--df-space-md) var(--df-space-lg);
+      border-bottom: 1px solid var(--df-border);
+      flex-shrink: 0;
+    }
+
+    .sf-preview-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--df-foreground);
+    }
+
+    .sf-preview-progress {
+      font-size: 12px;
+      color: var(--df-muted);
+    }
+
+    .sf-preview-progress strong {
+      color: var(--df-primary);
+      font-weight: 600;
+    }
+
+    /* ---- Episode List ---- */
+    .sf-episode-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--df-space-sm);
+    }
+
+    .sf-episode-list::-webkit-scrollbar {
+      width: 5px;
+    }
+    .sf-episode-list::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.1);
+      border-radius: 3px;
+    }
+
+    .sf-episode-item {
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-md);
+      margin-bottom: var(--df-space-2);
+      transition: all var(--df-transition-fast);
+      overflow: hidden;
+    }
+
+    .sf-episode-item.locked {
+      background: #ECFDF5;
+      border-color: #A7F3D0;
+    }
+
+    .sf-episode-item.expanded {
+      border-color: var(--df-primary);
+      box-shadow: 0 0 0 1px var(--color-primary-50);
+    }
+
+    .sf-episode-header {
+      display: flex;
+      align-items: center;
+      padding: var(--df-space-3) var(--df-space-4);
+      cursor: pointer;
+      gap: var(--df-space-3);
+      user-select: none;
+      transition: background var(--df-transition-fast);
+    }
+
+    .sf-episode-header:hover {
+      background: var(--color-neutral-50);
+    }
+
+    .sf-episode-item.locked .sf-episode-header:hover {
+      background: rgba(16,185,129,0.05);
+    }
+
+    .sf-episode-num {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--df-radius-sm);
+      background: var(--color-neutral-100);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-neutral-600);
+      flex-shrink: 0;
+    }
+
+    .sf-episode-item.locked .sf-episode-num {
+      background: #D1FAE5;
+      color: #059669;
+    }
+
+    .sf-episode-title {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--df-foreground);
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ---- Episode Status Badges ---- */
+    .sf-episode-status {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px var(--df-space-2);
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: var(--df-radius-full);
+      flex-shrink: 0;
+    }
+
+    .sf-episode-status.pending {
+      background: var(--color-neutral-100);
+      color: var(--color-neutral-500);
+    }
+
+    .sf-episode-status.generated {
+      background: #EFF6FF;
+      color: #3B82F6;
+    }
+
+    .sf-episode-status.locked {
+      background: #D1FAE5;
+      color: #059669;
+    }
+
+    .sf-episode-chevron {
+      width: 16px;
+      height: 16px;
+      color: var(--color-neutral-400);
+      transition: transform var(--df-transition-fast);
+      flex-shrink: 0;
+    }
+
+    .sf-episode-item.expanded .sf-episode-chevron {
+      transform: rotate(180deg);
+    }
+
+    /* ---- Episode Detail ---- */
+    .sf-episode-detail {
+      display: none;
+      padding: 0 var(--df-space-4) var(--df-space-4);
+      border-top: 1px solid var(--df-border);
+    }
+
+    .sf-episode-item.expanded .sf-episode-detail {
+      display: block;
+    }
+
+    .sf-scene-desc {
+      padding: var(--df-space-3) 0;
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--df-foreground);
+    }
+
+    .sf-scene-desc-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-neutral-400);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--df-space-1);
+    }
+
+    .sf-dialogue-block {
+      padding: var(--df-space-2) 0;
+      border-bottom: 1px solid var(--color-neutral-100);
+    }
+
+    .sf-dialogue-block:last-child {
+      border-bottom: none;
+    }
+
+    .sf-dialogue-char {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .sf-dialogue-text {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--color-neutral-700);
+    }
+
+    .sf-narration {
+      padding: var(--df-space-2) 0;
+      font-size: 12px;
+      color: var(--color-neutral-500);
+      font-style: italic;
+      line-height: 1.6;
+    }
+
+    .sf-narration-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--color-neutral-400);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ---- Episode Action Bar ---- */
+    .sf-episode-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-2);
+      padding-top: var(--df-space-3);
+      margin-top: var(--df-space-2);
+      border-top: 1px solid var(--color-neutral-100);
+    }
+
+    .sf-episode-action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px var(--df-space-3);
+      font-family: var(--df-font-sans);
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--df-muted);
+      background: transparent;
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-sm);
+      cursor: pointer;
+      transition: all var(--df-transition-fast);
+    }
+
+    .sf-episode-action-btn:hover {
+      color: var(--df-primary);
+      border-color: var(--df-primary);
+      background: var(--color-primary-50);
+    }
+
+    .sf-episode-action-btn.lock-btn:hover {
+      color: #059669;
+      border-color: #059669;
+      background: #ECFDF5;
+    }
+
+    .sf-episode-action-icon {
+      width: 13px;
+      height: 13px;
+    }
+
+    /* ---- Bottom Toolbar ---- */
+    .sf-bottom-toolbar {
+      position: fixed;
+      bottom: 0;
+      left: var(--df-sidebar-width);
+      right: 0;
+      height: 64px;
+      background: var(--df-card);
+      border-top: 1px solid var(--df-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--df-space-lg);
+      z-index: 50;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
+    }
+
+    .sf-bottom-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-md);
+    }
+
+    .sf-bottom-toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-3);
+    }
+
+    .sf-bottom-progress {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-2);
+      font-size: 13px;
+      color: var(--df-muted);
+    }
+
+    .sf-bottom-progress strong {
+      color: var(--df-primary);
+      font-weight: 600;
+    }
+
+    .sf-progress-bar {
+      width: 120px;
+      height: 6px;
+      background: var(--color-neutral-100);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .sf-progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-primary-500), var(--color-primary-600));
+      border-radius: 3px;
+      transition: width var(--df-transition-normal);
+    }
+
+    .sf-btn-toolbar-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--df-space-2);
+      height: 40px;
+      padding: 0 var(--df-space-5);
+      font-family: var(--df-font-sans);
+      font-size: 14px;
+      font-weight: 600;
+      color: #FFFFFF;
+      background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500));
+      border: none;
+      border-radius: var(--df-radius-md);
+      cursor: pointer;
+      transition: all var(--df-transition-fast);
+    }
+
+    .sf-btn-toolbar-primary:hover {
+      background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-600));
+    }
+
+    .sf-btn-toolbar-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--df-space-2);
+      height: 40px;
+      padding: 0 var(--df-space-5);
+      font-family: var(--df-font-sans);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--df-foreground);
+      background: transparent;
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-md);
+      cursor: pointer;
+      transition: all var(--df-transition-fast);
+    }
+
+    .sf-btn-toolbar-secondary:hover {
+      background: var(--color-neutral-100);
+      border-color: var(--color-neutral-300);
+    }
+
+    /* ---- Bottom spacer for fixed toolbar ---- */
+    .sf-content-bottom-spacer {
+      height: 80px;
+      flex-shrink: 0;
+    }
+
+    /* ---- Contrast tags for dialogue characters ---- */
+    .sf-char-1 { color: #4F46E5; }
+    .sf-char-2 { color: #059669; }
+    .sf-char-3 { color: #D97706; }
+    .sf-char-4 { color: #DC2626; }
+
+    /* ---- Breadcrumb ---- */
+    .topbar-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .topbar-breadcrumb-item {
+      color: var(--df-muted);
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    .topbar-breadcrumb-item:hover {
+      color: var(--df-primary);
+    }
+
+    .topbar-breadcrumb-sep {
+      color: var(--color-neutral-300);
+      font-size: 12px;
+    }
+
+    .topbar-breadcrumb-item.current {
+      color: var(--df-foreground);
+      font-weight: 500;
+    }
+
+    .topbar-page-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--df-foreground);
+    }
+  </style>
+</body>
+</html>

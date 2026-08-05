@@ -1,0 +1,2115 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分镜工作台 - DramaFlow</title>
+    <style id="theme-vars">
+/* ============================================
+   DramaFlow Design System — Brand CSS
+   Indigo-Violet palette | Inter + PingFang SC
+   ============================================ */
+
+/* --- CSS Custom Properties --- */
+:root {
+  /* Brand scale — single primary hue (Indigo) */
+  --color-primary-50:  #EEF2FF;
+  --color-primary-100: #E0E7FF;
+  --color-primary-200: #C7D2FE;
+  --color-primary-300: #A5B4FC;
+  --color-primary-400: #818CF8;
+  --color-primary-500: #6366F1;
+  --color-primary-600: #4F46E5;
+  --color-primary-700: #4338CA;
+  --color-primary-800: #3730A3;
+  --color-primary-900: #312E81;
+
+  /* Neutral gray scale */
+  --color-neutral-50:  #F8F9FC;
+  --color-neutral-100: #F1F3F9;
+  --color-neutral-200: #E2E6EF;
+  --color-neutral-300: #C8CFDD;
+  --color-neutral-400: #9CA3B5;
+  --color-neutral-500: #6B7280;
+  --color-neutral-600: #4B5563;
+  --color-neutral-700: #374151;
+  --color-neutral-800: #1F2937;
+  --color-neutral-900: #1A1A2E;
+
+  /* State colors */
+  --state-success: #10B981;
+  --state-success-bg: #ECFDF5;
+  --state-warning: #F59E0B;
+  --state-warning-bg: #FFFBEB;
+  --state-error:   #EF4444;
+  --state-error-bg:   #FEF2F2;
+  --state-info:    #3B82F6;
+  --state-info-bg:    #EFF6FF;
+
+  /* Semantic aliases (mapped to primary + neutral) */
+  --df-background:        var(--color-neutral-50);
+  --df-foreground:        var(--color-neutral-900);
+  --df-card:              #FFFFFF;
+  --df-card-foreground:   var(--color-neutral-900);
+  --df-popover:           #FFFFFF;
+  --df-popover-foreground:var(--color-neutral-900);
+  --df-primary:           var(--color-primary-600);
+  --df-primary-foreground:#FFFFFF;
+  --df-primary-hover:     var(--color-primary-700);
+  --df-muted:             var(--color-neutral-500);
+  --df-muted-foreground:  var(--color-neutral-500);
+  --df-border:            var(--color-neutral-200);
+  --df-input:             var(--color-neutral-100);
+  --df-ring:              var(--color-primary-200);
+
+  /* Radius scale */
+  --df-radius-sm:   4px;
+  --df-radius-md:   8px;
+  --df-radius-lg:   12px;
+  --df-radius-full: 9999px;
+
+  /* Shadow tokens — static surfaces use border, only floating layers get elevation */
+  --df-shadow-card:    0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+  --df-shadow-hover:   0 4px 12px rgba(0,0,0,0.08);
+  --df-shadow-popover: 0 8px 32px rgba(0,0,0,0.12);
+  --df-shadow-modal:   0 16px 48px rgba(0,0,0,0.15);
+
+  /* Typography */
+  --df-font-sans:   'Inter', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  --df-font-mono:   'JetBrains Mono', 'SF Mono', 'Consolas', 'Monaco', monospace;
+
+  /* Spacing scale (4px grid) */
+  --df-space-1:  4px;
+  --df-space-2:  8px;
+  --df-space-3:  12px;
+  --df-space-4:  16px;
+  --df-space-5:  20px;
+  --df-space-6:  24px;
+  --df-space-8:  32px;
+  --df-space-10: 40px;
+  --df-space-12: 48px;
+  --df-space-16: 64px;
+
+  /* Shell aliases */
+  --df-space-xs: var(--df-space-1);
+  --df-space-sm: var(--df-space-2);
+  --df-space-md: var(--df-space-4);
+  --df-space-lg: var(--df-space-6);
+  --df-space-xl: var(--df-space-8);
+
+  /* Character color tokens */
+  --char-su:  linear-gradient(135deg, #6366F1, #A78BFA);
+  --char-chen: linear-gradient(135deg, #F59E0B, #F97316);
+  --char-lin:  linear-gradient(135deg, #10B981, #34D399);
+  --char-zhou: linear-gradient(135deg, #EF4444, #F87171);
+
+  /* Layout */
+  --df-sidebar-width:   240px;
+  --df-topbar-height:   56px;
+  --df-content-max:     1200px;
+
+  /* Transitions */
+  --df-transition-fast:   150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --df-transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --df-transition-slow:   500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Base Typography --- */
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--df-foreground);
+  background: var(--df-background);
+}
+
+h1, .h1 { font-size: 28px; font-weight: 700; line-height: 1.3; letter-spacing: -0.02em; }
+h2, .h2 { font-size: 20px; font-weight: 700; line-height: 1.35; }
+h3, .h3 { font-size: 16px; font-weight: 600; line-height: 1.4; }
+h4, .h4 { font-size: 14px; font-weight: 600; line-height: 1.5; }
+
+.text-xs  { font-size: 12px; line-height: 1.5; }
+.text-sm  { font-size: 13px; line-height: 1.5; }
+.text-md  { font-size: 14px; line-height: 1.6; }
+.text-mono { font-family: var(--df-font-mono); font-size: 13px; }
+
+.text-muted  { color: var(--df-muted); }
+.text-primary { color: var(--df-primary); }
+
+/* --- Utility Classes --- */
+.df-card {
+  background: var(--df-card);
+  border: 1px solid var(--df-border);
+  border-radius: var(--df-radius-lg);
+  box-shadow: var(--df-shadow-card);
+  transition: box-shadow var(--df-transition-fast), transform var(--df-transition-fast);
+}
+.df-card:hover {
+  box-shadow: var(--df-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.df-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--df-space-2);
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--df-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--df-transition-fast);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.df-btn:focus-visible {
+  outline: 2px solid var(--df-ring);
+  outline-offset: 2px;
+}
+
+.df-btn-sm  { height: 36px; padding: 0 var(--df-space-4); font-size: 13px; }
+.df-btn-md  { height: 40px; padding: 0 var(--df-space-5); }
+.df-btn-lg  { height: 48px; padding: 0 var(--df-space-6); font-size: 16px; }
+
+.df-btn-primary {
+  background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500));
+  color: #FFFFFF;
+  border-color: transparent;
+}
+.df-btn-primary:hover {
+  background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-600));
+}
+
+.df-btn-secondary {
+  background: transparent;
+  color: var(--df-foreground);
+  border-color: var(--df-border);
+}
+.df-btn-secondary:hover {
+  background: var(--color-neutral-100);
+  border-color: var(--color-neutral-300);
+}
+
+.df-btn-ghost {
+  background: transparent;
+  color: var(--df-muted);
+  border-color: transparent;
+}
+.df-btn-ghost:hover {
+  background: var(--color-neutral-100);
+  color: var(--df-foreground);
+}
+
+.df-input {
+  height: 40px;
+  padding: 0 var(--df-space-4);
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  color: var(--df-foreground);
+  background: var(--df-card);
+  border: 1px solid var(--df-border);
+  border-radius: var(--df-radius-md);
+  transition: border-color var(--df-transition-fast), box-shadow var(--df-transition-fast);
+  outline: none;
+}
+.df-input:focus {
+  border-color: var(--df-primary);
+  box-shadow: 0 0 0 3px var(--df-ring);
+}
+.df-input::placeholder {
+  color: var(--color-neutral-400);
+}
+
+.df-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--df-space-3);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--df-radius-full);
+  line-height: 1.5;
+}
+
+.df-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px var(--df-space-3);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-primary-700);
+  background: var(--color-primary-50);
+  border-radius: var(--df-radius-full);
+  border: 1px solid var(--color-primary-100);
+}
+
+.df-divider {
+  border: none;
+  border-top: 1px solid var(--df-border);
+  margin: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-neutral-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-400); }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--df-background);
+    --color-foreground: var(--df-foreground);
+    --color-card: var(--df-card);
+    --color-card-foreground: var(--df-card-foreground);
+    --color-popover: var(--df-popover);
+    --color-popover-foreground: var(--df-popover-foreground);
+    --color-primary: var(--df-primary);
+    --color-primary-foreground: var(--df-primary-foreground);
+    --color-muted: var(--df-muted);
+    --color-muted-foreground: var(--df-muted-foreground);
+    --color-border: var(--df-border);
+    --color-input: var(--df-input);
+    --color-ring: var(--df-ring);
+    --radius-sm: var(--df-radius-sm);
+    --radius-md: var(--df-radius-md);
+    --radius-lg: var(--df-radius-lg);
+  }
+  @layer base {
+    body { background: var(--df-background); color: var(--df-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--df-background); }
+      .text-background { color: var(--df-background); }
+      .border-background { border-color: var(--df-background); }
+      .ring-background { --tw-ring-color: var(--df-background); }
+      .bg-foreground { background-color: var(--df-foreground); }
+      .text-foreground { color: var(--df-foreground); }
+      .border-foreground { border-color: var(--df-foreground); }
+      .ring-foreground { --tw-ring-color: var(--df-foreground); }
+      .bg-card { background-color: var(--df-card); }
+      .text-card { color: var(--df-card); }
+      .border-card { border-color: var(--df-card); }
+      .ring-card { --tw-ring-color: var(--df-card); }
+      .bg-card-foreground { background-color: var(--df-card-foreground); }
+      .text-card-foreground { color: var(--df-card-foreground); }
+      .border-card-foreground { border-color: var(--df-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--df-card-foreground); }
+      .bg-popover { background-color: var(--df-popover); }
+      .text-popover { color: var(--df-popover); }
+      .border-popover { border-color: var(--df-popover); }
+      .ring-popover { --tw-ring-color: var(--df-popover); }
+      .bg-popover-foreground { background-color: var(--df-popover-foreground); }
+      .text-popover-foreground { color: var(--df-popover-foreground); }
+      .border-popover-foreground { border-color: var(--df-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--df-popover-foreground); }
+      .bg-primary { background-color: var(--df-primary); }
+      .text-primary { color: var(--df-primary); }
+      .border-primary { border-color: var(--df-primary); }
+      .ring-primary { --tw-ring-color: var(--df-primary); }
+      .bg-primary-foreground { background-color: var(--df-primary-foreground); }
+      .text-primary-foreground { color: var(--df-primary-foreground); }
+      .border-primary-foreground { border-color: var(--df-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--df-primary-foreground); }
+      .bg-muted { background-color: var(--df-muted); }
+      .text-muted { color: var(--df-muted); }
+      .border-muted { border-color: var(--df-muted); }
+      .ring-muted { --tw-ring-color: var(--df-muted); }
+      .bg-muted-foreground { background-color: var(--df-muted-foreground); }
+      .text-muted-foreground { color: var(--df-muted-foreground); }
+      .border-muted-foreground { border-color: var(--df-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--df-muted-foreground); }
+      .bg-border { background-color: var(--df-border); }
+      .text-border { color: var(--df-border); }
+      .border-border { border-color: var(--df-border); }
+      .ring-border { --tw-ring-color: var(--df-border); }
+      .bg-input { background-color: var(--df-input); }
+      .text-input { color: var(--df-input); }
+      .border-input { border-color: var(--df-input); }
+      .ring-input { --tw-ring-color: var(--df-input); }
+      .bg-ring { background-color: var(--df-ring); }
+      .text-ring { color: var(--df-ring); }
+      .border-ring { border-color: var(--df-ring); }
+      .ring-ring { --tw-ring-color: var(--df-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+    <style>
+    /* ============================================
+       DramaFlow Shared Project Shell (inlined)
+       ============================================ */
+
+    /* ===== Reset & Base ===== */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--df-font-sans);
+      background: var(--df-background);
+      color: var(--df-foreground);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ===== App Layout ===== */
+    .app-layout {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== Sidebar ===== */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: var(--df-sidebar-width);
+      background: var(--color-neutral-900);
+      color: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-sm);
+      padding: var(--df-space-lg) var(--df-space-md);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar-logo-icon { width: 32px; height: 32px; flex-shrink: 0; }
+
+    .sidebar-logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, var(--color-primary-400) 0%, var(--color-primary-600) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: var(--df-space-sm) 0;
+      list-style: none;
+    }
+
+    .sidebar-nav-item {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-sm);
+      padding: var(--df-space-sm) var(--df-space-md);
+      margin: 2px var(--df-space-sm);
+      border-radius: var(--df-radius-sm);
+      font-size: 14px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.7);
+      cursor: pointer;
+      transition: background var(--df-transition-fast), color var(--df-transition-fast), border var(--df-transition-fast);
+      border-left: 3px solid transparent;
+      text-decoration: none;
+      user-select: none;
+    }
+
+    .sidebar-nav-item:hover {
+      background: rgba(255,255,255,0.08);
+      color: #FFFFFF;
+    }
+
+    .sidebar-nav-item.active {
+      background: rgba(99,102,241,0.15);
+      color: #FFFFFF;
+      border-left-color: var(--color-primary-600);
+      font-weight: 500;
+    }
+
+    .sidebar-nav-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    .sidebar-nav-item.active .sidebar-nav-icon,
+    .sidebar-nav-item:hover .sidebar-nav-icon { opacity: 1; }
+
+    .sidebar-user {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-sm);
+      padding: var(--df-space-md);
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar-user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--color-primary-500) 0%, var(--color-primary-400) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .sidebar-user-info { flex: 1; min-width: 0; }
+
+    .sidebar-user-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #FFFFFF;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-user-role {
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+    }
+
+    .sidebar-settings-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--df-radius-sm);
+      color: rgba(255,255,255,0.45);
+      transition: background var(--df-transition-fast), color var(--df-transition-fast);
+      cursor: pointer;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .sidebar-settings-link:hover {
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.8);
+    }
+
+    .sidebar-settings-icon { width: 16px; height: 16px; }
+
+    /* ===== Main Area ===== */
+    .main-area {
+      margin-left: var(--df-sidebar-width);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== Topbar ===== */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: var(--df-topbar-height);
+      background: var(--df-card);
+      border-bottom: 1px solid var(--df-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--df-space-lg);
+      flex-shrink: 0;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-xs);
+      font-size: 13px;
+      color: var(--df-muted);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-md);
+    }
+
+    /* ===== Content ===== */
+    .content {
+      flex: 1;
+      padding: var(--df-space-lg);
+      overflow-y: auto;
+      background: var(--df-background);
+    }
+
+    .content::-webkit-scrollbar { width: 6px; }
+    .content::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.12);
+      border-radius: 3px;
+    }
+    </style>
+</head>
+<body>
+
+  <!-- ==========================================
+    DramaFlow Shared Project Shell
+    ========================================== -->
+  <div class="app-layout">
+
+    <!-- ========== SIDEBAR ========== -->
+    <aside class="sidebar">
+
+      <!-- Logo -->
+      <div class="sidebar-logo">
+        <svg class="sidebar-logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="logo-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#818CF8"/>
+              <stop offset="100%" stop-color="#4F46E5"/>
+            </linearGradient>
+          </defs>
+          <rect x="4" y="2" width="24" height="28" rx="4" fill="url(#logo-grad)"/>
+          <path d="M10 9h12M10 13h8M10 17h10M10 21h6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+          <path d="M22 22l3 3M25 22l-3 3" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span class="sidebar-logo-text">DramaFlow</span>
+      </div>
+
+      <!-- Navigation -->
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-item" data-nav-key="dashboard" data-dom-id="nav-dashboard">
+          <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="6" height="6" rx="1"/>
+            <rect x="11" y="3" width="6" height="6" rx="1"/>
+            <rect x="3" y="11" width="6" height="6" rx="1"/>
+            <rect x="11" y="11" width="6" height="6" rx="1"/>
+          </svg>
+          <span>仪表盘</span>
+        </li>
+        <li class="sidebar-nav-item" data-nav-key="script-factory" data-dom-id="nav-script-factory">
+          <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 18V2h8l4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/>
+            <polyline points="12 2 12 6 16 6"/>
+            <line x1="8" y1="10" x2="12" y2="10"/>
+            <line x1="8" y1="13" x2="12" y2="13"/>
+            <line x1="8" y1="16" x2="10" y2="16"/>
+          </svg>
+          <span>剧本工厂</span>
+        </li>
+        <li class="sidebar-nav-item" data-nav-key="character-library" data-dom-id="nav-character-library">
+          <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7" cy="7" r="3"/>
+            <path d="M1 18v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/>
+            <circle cx="14" cy="7" r="3"/>
+            <path d="M14 12h3a2 2 0 0 1 2 2v1"/>
+          </svg>
+          <span>角色资产库</span>
+        </li>
+        <li class="sidebar-nav-item active" data-nav-key="storyboard">
+          <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="7" height="7" rx="1"/>
+            <rect x="11" y="2" width="7" height="7" rx="1"/>
+            <rect x="2" y="11" width="7" height="7" rx="1"/>
+            <rect x="11" y="11" width="7" height="7" rx="1"/>
+          </svg>
+          <span>分镜工作台</span>
+        </li>
+        <li class="sidebar-nav-item" data-nav-key="video-generation" data-dom-id="nav-video-generation">
+          <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 15 10 5 17" fill="currentColor" stroke="none" opacity="0.7"/>
+            <polygon points="5 3 15 10 5 17" fill="none" stroke="currentColor"/>
+          </svg>
+          <span>视频生成</span>
+        </li>
+        <li class="sidebar-nav-item" data-nav-key="post-production" data-dom-id="nav-post-production">
+          <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="10" cy="10" r="7"/>
+            <circle cx="10" cy="10" r="3" fill="currentColor" stroke="none" opacity="0.5"/>
+            <line x1="10" y1="3" x2="10" y2="7"/>
+            <line x1="10" y1="13" x2="10" y2="17"/>
+            <line x1="3" y1="10" x2="7" y2="10"/>
+            <line x1="13" y1="10" x2="17" y2="10"/>
+          </svg>
+          <span>后期处理</span>
+        </li>
+      </ul>
+
+      <!-- User Area -->
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar">创</div>
+        <div class="sidebar-user-info">
+          <div class="sidebar-user-name">创作者</div>
+          <div class="sidebar-user-role">Pro Plan</div>
+        </div>
+        <a class="sidebar-settings-link" href="#" title="设置">
+          <svg class="sidebar-settings-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="8" cy="8" r="2.5"/>
+            <path d="M8 1.5v1.5M8 13v1.5M3.42 3.42l1.06 1.06M11.52 11.52l1.06 1.06M1.5 8H3M13 8h1.5M3.42 12.58l1.06-1.06M11.52 4.48l1.06-1.06"/>
+          </svg>
+        </a>
+      </div>
+
+    </aside>
+
+    <!-- ========== MAIN AREA ========== -->
+    <div class="main-area">
+
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <span style="color: var(--df-muted);">春日尽处</span>
+          <span style="color: var(--color-neutral-400);">/</span>
+          <span style="color: var(--df-foreground); font-weight: 500;">分镜工作台</span>
+        </div>
+        <div class="topbar-right">
+          <h2 class="h2" style="margin:0;">分镜工作台</h2>
+        </div>
+      </header>
+
+      <!-- Content -->
+      <main class="content" style="padding: 0; display: flex; flex-direction: column; overflow: hidden;">
+
+        <!-- ===== Top Toolbar ===== -->
+        <div class="sb-toolbar" data-dom-id="storyboard-toolbar">
+          <div class="sb-toolbar-left">
+            <button class="sb-episode-select" data-dom-id="episode-selector">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+              <span>第 1 集</span>
+            </button>
+
+            <button class="df-btn df-btn-sm df-btn-primary" data-dom-id="btn-smart-breakdown">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+              智能分镜
+            </button>
+
+            <button class="df-btn df-btn-sm df-btn-ghost" data-dom-id="btn-toggle-expand">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+              全部展开
+            </button>
+          </div>
+
+          <div class="sb-toolbar-right">
+            <div class="sb-toolbar-stats">
+              <div class="sb-toolbar-stat">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7"/>
+                  <rect x="14" y="3" width="7" height="7"/>
+                  <rect x="3" y="14" width="7" height="7"/>
+                  <rect x="14" y="14" width="7" height="7"/>
+                </svg>
+                <span>总计</span>
+                <span class="sb-toolbar-stat-value">12 镜</span>
+              </div>
+              <span style="color: var(--color-neutral-300);">|</span>
+              <div class="sb-toolbar-stat">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span class="sb-toolbar-stat-value">3 分钟</span>
+              </div>
+            </div>
+
+            <button class="df-btn df-btn-sm df-btn-primary" data-dom-id="btn-batch-generate">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              批量生成视频
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== Storyboard Layout ===== -->
+        <div class="storyboard-layout">
+
+          <!-- ===== LEFT: Shot List Panel ===== -->
+          <div class="sb-shot-list" data-dom-id="shot-list-panel">
+            <div class="sb-shot-list-header">
+              <span class="sb-shot-list-title">镜头列表</span>
+              <span class="sb-shot-list-count">12 镜</span>
+            </div>
+            <div class="sb-shot-list-body" data-dom-id="shot-list-body">
+
+              <!-- Shot Card #1 -->
+              <div class="sb-shot-card selected" data-dom-id="shot-card-1" data-shot-id="1" data-episode="1" data-shot="1" tabindex="0">
+                <div class="sb-shot-drag" data-dom-id="shot-drag-1">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="16" y2="6"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                    <line x1="8" y1="18" x2="16" y2="18"/>
+                  </svg>
+                </div>
+                <div class="sb-shot-content">
+                  <div class="sb-shot-header">
+                    <span class="sb-shot-number">#1.1</span>
+                    <div class="sb-shot-badges">
+                      <span class="sb-shot-badge sb-badge-shot-type">远景</span>
+                      <span class="sb-shot-badge sb-badge-camera">推</span>
+                      <span class="sb-shot-badge sb-badge-duration">3s</span>
+                    </div>
+                  </div>
+                  <div class="sb-shot-thumb">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span class="sb-shot-thumb-notice">未生成</span>
+                  </div>
+                  <div class="sb-shot-info-row">
+                    <div class="sb-shot-avatars">
+                      <div class="sb-shot-avatar" style="background: var(--char-su);">苏</div>
+                      <div class="sb-shot-avatar" style="background: var(--char-chen);">陈</div>
+                    </div>
+                  </div>
+                  <p class="sb-shot-desc">春日郊外的远景，樱花飘落，苏晚和陈屿并肩站在山坡上，远处是连绵的青山和缓缓流动的云海</p>
+                </div>
+              </div>
+
+              <!-- Shot Card #2 -->
+              <div class="sb-shot-card" data-dom-id="shot-card-2" data-shot-id="2" data-episode="1" data-shot="2" tabindex="0">
+                <div class="sb-shot-drag" data-dom-id="shot-drag-2">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="16" y2="6"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                    <line x1="8" y1="18" x2="16" y2="18"/>
+                  </svg>
+                </div>
+                <div class="sb-shot-content">
+                  <div class="sb-shot-header">
+                    <span class="sb-shot-number">#1.2</span>
+                    <div class="sb-shot-badges">
+                      <span class="sb-shot-badge sb-badge-shot-type">中景</span>
+                      <span class="sb-shot-badge sb-badge-camera">固定</span>
+                      <span class="sb-shot-badge sb-badge-duration">5s</span>
+                    </div>
+                  </div>
+                  <div class="sb-shot-thumb">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span class="sb-shot-thumb-notice">未生成</span>
+                  </div>
+                  <div class="sb-shot-info-row">
+                    <div class="sb-shot-avatars">
+                      <div class="sb-shot-avatar" style="background: var(--char-su);">苏</div>
+                    </div>
+                  </div>
+                  <p class="sb-shot-desc">苏晚的特写，她微微侧头，风吹起她的发丝，眼神中带着一丝怀念和淡淡的忧伤</p>
+                </div>
+              </div>
+
+              <!-- Shot Card #3 -->
+              <div class="sb-shot-card" data-dom-id="shot-card-3" data-shot-id="3" data-episode="1" data-shot="3" tabindex="0">
+                <div class="sb-shot-drag" data-dom-id="shot-drag-3">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="16" y2="6"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                    <line x1="8" y1="18" x2="16" y2="18"/>
+                  </svg>
+                </div>
+                <div class="sb-shot-content">
+                  <div class="sb-shot-header">
+                    <span class="sb-shot-number">#1.3</span>
+                    <div class="sb-shot-badges">
+                      <span class="sb-shot-badge sb-badge-shot-type">近景</span>
+                      <span class="sb-shot-badge sb-badge-camera">跟</span>
+                      <span class="sb-shot-badge sb-badge-duration">4s</span>
+                    </div>
+                  </div>
+                  <div class="sb-shot-thumb">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span class="sb-shot-thumb-notice">未生成</span>
+                  </div>
+                  <div class="sb-shot-info-row">
+                    <div class="sb-shot-avatars">
+                      <div class="sb-shot-avatar" style="background: var(--char-su);">苏</div>
+                      <div class="sb-shot-avatar" style="background: var(--char-chen);">陈</div>
+                      <div class="sb-shot-avatar" style="background: var(--char-lin);">林</div>
+                    </div>
+                  </div>
+                  <p class="sb-shot-desc">苏晚和陈屿缓步走下山坡，林小满从远处跑来，三人相遇，镜头跟随苏晚的背影缓缓推进</p>
+                </div>
+              </div>
+
+              <!-- Shot Card #4 -->
+              <div class="sb-shot-card" data-dom-id="shot-card-4" data-shot-id="4" data-episode="1" data-shot="4" tabindex="0">
+                <div class="sb-shot-drag" data-dom-id="shot-drag-4">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="16" y2="6"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                    <line x1="8" y1="18" x2="16" y2="18"/>
+                  </svg>
+                </div>
+                <div class="sb-shot-content">
+                  <div class="sb-shot-header">
+                    <span class="sb-shot-number">#1.4</span>
+                    <div class="sb-shot-badges">
+                      <span class="sb-shot-badge sb-badge-shot-type">特写</span>
+                      <span class="sb-shot-badge sb-badge-camera">固定</span>
+                      <span class="sb-shot-badge sb-badge-duration">2s</span>
+                    </div>
+                  </div>
+                  <div class="sb-shot-thumb">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span class="sb-shot-thumb-notice">未生成</span>
+                  </div>
+                  <div class="sb-shot-info-row">
+                    <div class="sb-shot-avatars">
+                      <div class="sb-shot-avatar" style="background: var(--char-lin);">林</div>
+                    </div>
+                  </div>
+                  <p class="sb-shot-desc">林小满手中紧握的旧照片特写，照片边缘泛黄，上面是一对年轻夫妇的合影</p>
+                </div>
+              </div>
+
+              <!-- Shot Card #5 -->
+              <div class="sb-shot-card" data-dom-id="shot-card-5" data-shot-id="5" data-episode="1" data-shot="5" tabindex="0">
+                <div class="sb-shot-drag" data-dom-id="shot-drag-5">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="16" y2="6"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                    <line x1="8" y1="18" x2="16" y2="18"/>
+                  </svg>
+                </div>
+                <div class="sb-shot-content">
+                  <div class="sb-shot-header">
+                    <span class="sb-shot-number">#1.5</span>
+                    <div class="sb-shot-badges">
+                      <span class="sb-shot-badge sb-badge-shot-type">全景</span>
+                      <span class="sb-shot-badge sb-badge-camera">摇</span>
+                      <span class="sb-shot-badge sb-badge-duration">6s</span>
+                    </div>
+                  </div>
+                  <div class="sb-shot-thumb">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span class="sb-shot-thumb-notice">未生成</span>
+                  </div>
+                  <div class="sb-shot-info-row">
+                    <div class="sb-shot-avatars">
+                      <div class="sb-shot-avatar" style="background: var(--char-su);">苏</div>
+                      <div class="sb-shot-avatar" style="background: var(--char-chen);">陈</div>
+                      <div class="sb-shot-avatar" style="background: var(--char-lin);">林</div>
+                      <div class="sb-shot-avatar-plus">+1</div>
+                    </div>
+                  </div>
+                  <p class="sb-shot-desc">镜头从天空缓缓摇下，掠过树梢，最终定格在三人坐在山坡上的全景画面，夕阳将天空染成橙红色</p>
+                </div>
+              </div>
+
+              <!-- Shot Card #6 -->
+              <div class="sb-shot-card" data-dom-id="shot-card-6" data-shot-id="6" data-episode="1" data-shot="6" tabindex="0">
+                <div class="sb-shot-drag" data-dom-id="shot-drag-6">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="16" y2="6"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                    <line x1="8" y1="18" x2="16" y2="18"/>
+                  </svg>
+                </div>
+                <div class="sb-shot-content">
+                  <div class="sb-shot-header">
+                    <span class="sb-shot-number">#1.6</span>
+                    <div class="sb-shot-badges">
+                      <span class="sb-shot-badge sb-badge-shot-type">中景</span>
+                      <span class="sb-shot-badge sb-badge-camera">拉</span>
+                      <span class="sb-shot-badge sb-badge-duration">4s</span>
+                    </div>
+                  </div>
+                  <div class="sb-shot-thumb">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span class="sb-shot-thumb-notice">未生成</span>
+                  </div>
+                  <div class="sb-shot-info-row">
+                    <div class="sb-shot-avatars">
+                      <div class="sb-shot-avatar" style="background: var(--char-chen);">陈</div>
+                    </div>
+                  </div>
+                  <p class="sb-shot-desc">陈屿独自站在老槐树下，镜头从他手中的信缓缓拉远，露出他复杂的表情和身后斑驳的树影</p>
+                </div>
+              </div>
+
+              <!-- Shot Card #7 -->
+              <div class="sb-shot-card" data-dom-id="shot-card-7" data-shot-id="7" data-episode="1" data-shot="7" tabindex="0">
+                <div class="sb-shot-drag" data-dom-id="shot-drag-7">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="16" y2="6"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                    <line x1="8" y1="18" x2="16" y2="18"/>
+                  </svg>
+                </div>
+                <div class="sb-shot-content">
+                  <div class="sb-shot-header">
+                    <span class="sb-shot-number">#1.7</span>
+                    <div class="sb-shot-badges">
+                      <span class="sb-shot-badge sb-badge-shot-type">近景</span>
+                      <span class="sb-shot-badge sb-badge-camera">移</span>
+                      <span class="sb-shot-badge sb-badge-duration">3s</span>
+                    </div>
+                  </div>
+                  <div class="sb-shot-thumb">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span class="sb-shot-thumb-notice">未生成</span>
+                  </div>
+                  <div class="sb-shot-info-row">
+                    <div class="sb-shot-avatars">
+                      <div class="sb-shot-avatar" style="background: var(--char-su);">苏</div>
+                      <div class="sb-shot-avatar" style="background: var(--char-lin);">林</div>
+                    </div>
+                  </div>
+                  <p class="sb-shot-desc">苏晚牵起林小满的手，镜头横移跟随她们穿过开满野花的小径，花瓣随风飘落</p>
+                </div>
+              </div>
+
+              <!-- Shot Card #8 -->
+              <div class="sb-shot-card" data-dom-id="shot-card-8" data-shot-id="8" data-episode="1" data-shot="8" tabindex="0">
+                <div class="sb-shot-drag" data-dom-id="shot-drag-8">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="16" y2="6"/>
+                    <line x1="8" y1="12" x2="16" y2="12"/>
+                    <line x1="8" y1="18" x2="16" y2="18"/>
+                  </svg>
+                </div>
+                <div class="sb-shot-content">
+                  <div class="sb-shot-header">
+                    <span class="sb-shot-number">#1.8</span>
+                    <div class="sb-shot-badges">
+                      <span class="sb-shot-badge sb-badge-shot-type">远景</span>
+                      <span class="sb-shot-badge sb-badge-camera">固定</span>
+                      <span class="sb-shot-badge sb-badge-duration">5s</span>
+                    </div>
+                  </div>
+                  <div class="sb-shot-thumb">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span class="sb-shot-thumb-notice">未生成</span>
+                  </div>
+                  <div class="sb-shot-info-row">
+                    <div class="sb-shot-avatars">
+                      <div class="sb-shot-avatar" style="background: var(--char-su);">苏</div>
+                      <div class="sb-shot-avatar" style="background: var(--char-chen);">陈</div>
+                      <div class="sb-shot-avatar" style="background: var(--char-lin);">林</div>
+                    </div>
+                  </div>
+                  <p class="sb-shot-desc">日落时分的大远景，三人小小的身影融入金色的余晖中，画面渐暗，字幕淡入「春日尽处，皆是归途」</p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ===== RIGHT: Preview & Edit Panel ===== -->
+          <div class="sb-edit-panel" data-dom-id="edit-panel">
+
+            <div class="sb-edit-body">
+
+              <!-- Video Preview Area -->
+              <div class="sb-preview-area" data-dom-id="preview-area">
+                <div class="sb-preview-label">预览</div>
+                <div class="sb-preview-frame" data-dom-id="preview-frame">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  <div class="sb-preview-overlay">
+                    <div class="sb-preview-overlay-left">
+                      <span class="sb-preview-shot-num">#1.1</span>
+                      <span class="sb-preview-shot-desc">春日郊外远景，樱花飘落</span>
+                    </div>
+                    <span class="sb-preview-badge">远景 · 推</span>
+                  </div>
+                  <div class="sb-preview-status">未生成</div>
+                </div>
+              </div>
+
+              <!-- Edit Form -->
+              <div class="sb-edit-form" data-dom-id="edit-form">
+
+                <!-- 景别 -->
+                <div class="sb-form-group">
+                  <label class="sb-form-label">景别</label>
+                  <div class="sb-btn-group" data-dom-id="shot-type-group">
+                    <button class="sb-btn-group-btn active" data-dom-id="shot-type-远景" data-value="远景">远景</button>
+                    <button class="sb-btn-group-btn" data-dom-id="shot-type-全景" data-value="全景">全景</button>
+                    <button class="sb-btn-group-btn" data-dom-id="shot-type-中景" data-value="中景">中景</button>
+                    <button class="sb-btn-group-btn" data-dom-id="shot-type-近景" data-value="近景">近景</button>
+                    <button class="sb-btn-group-btn" data-dom-id="shot-type-特写" data-value="特写">特写</button>
+                  </div>
+                </div>
+
+                <!-- 运镜方式 -->
+                <div class="sb-form-group">
+                  <label class="sb-form-label">运镜方式</label>
+                  <select class="sb-select" data-dom-id="camera-move-select">
+                    <option value="固定">固定</option>
+                    <option value="推" selected>推</option>
+                    <option value="拉">拉</option>
+                    <option value="摇">摇</option>
+                    <option value="移">移</option>
+                    <option value="跟">跟</option>
+                  </select>
+                </div>
+
+                <!-- 时长 -->
+                <div class="sb-form-group">
+                  <label class="sb-form-label">时长</label>
+                  <div class="sb-duration-row">
+                    <input type="range" class="sb-duration-slider" data-dom-id="duration-slider" min="1" max="30" value="3">
+                    <input type="number" class="sb-duration-input" data-dom-id="duration-input" min="1" max="30" value="3">
+                    <span class="sb-duration-unit">秒</span>
+                  </div>
+                </div>
+
+                <!-- 角色选择 -->
+                <div class="sb-form-group">
+                  <label class="sb-form-label">角色选择</label>
+                  <div class="sb-char-tags" data-dom-id="character-tags">
+                    <span class="sb-char-tag active" data-dom-id="char-tag-苏晚" data-char="苏晚">
+                      <span class="sb-char-tag-avatar" style="background: var(--char-su);">苏</span>
+                      苏晚
+                    </span>
+                    <span class="sb-char-tag active" data-dom-id="char-tag-陈屿" data-char="陈屿">
+                      <span class="sb-char-tag-avatar" style="background: var(--char-chen);">陈</span>
+                      陈屿
+                    </span>
+                    <span class="sb-char-tag" data-dom-id="char-tag-林小满" data-char="林小满">
+                      <span class="sb-char-tag-avatar" style="background: var(--char-lin);">林</span>
+                      林小满
+                    </span>
+                    <span class="sb-char-tag" data-dom-id="char-tag-周远" data-char="周远">
+                      <span class="sb-char-tag-avatar" style="background: var(--char-zhou);">周</span>
+                      周远
+                    </span>
+                  </div>
+                </div>
+
+                <!-- 场景描述 -->
+                <div class="sb-form-group">
+                  <label class="sb-form-label">场景描述</label>
+                  <textarea class="sb-textarea" data-dom-id="scene-description" placeholder="描述此镜头的场景、动作和情绪...">春日郊外的远景，樱花飘落，苏晚和陈屿并肩站在山坡上，远处是连绵的青山和缓缓流动的云海</textarea>
+                </div>
+
+                <!-- 提示词编辑区 -->
+                <div class="sb-form-group">
+                  <label class="sb-form-label">提示词编辑区</label>
+                  <textarea class="sb-textarea sb-textarea-mono" data-dom-id="prompt-editor" placeholder="编辑 AI 生成提示词...">wide shot, spring countryside, cherry blossoms falling, two people standing on a hillside, distant green mountains, flowing sea of clouds, golden hour lighting, cinematic, 4k, photorealistic</textarea>
+                </div>
+
+              </div>
+
+              <!-- Action Bar -->
+              <div class="sb-action-bar" data-dom-id="action-bar">
+                <button class="df-btn df-btn-sm df-btn-primary" data-dom-id="btn-preview-shot">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                  </svg>
+                  预览此镜
+                </button>
+                <button class="df-btn df-btn-sm df-btn-secondary" data-dom-id="btn-apply-to-subsequent">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="17 1 21 5 17 9"/>
+                    <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                    <polyline points="7 23 3 19 7 15"/>
+                    <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                  </svg>
+                  应用到后续镜头
+                </button>
+                <div class="sb-action-bar-right">
+                  <button class="df-btn df-btn-sm df-btn-ghost" data-dom-id="btn-reset-shot">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="1 4 1 10 7 10"/>
+                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                    </svg>
+                    重置
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </main>
+
+    </div>
+
+  </div>
+
+  <!-- ===== Interactive Script ===== -->
+  <script>
+    (function() {
+      // ---- Shot Card Selection ----
+      const shotCards = document.querySelectorAll('.sb-shot-card');
+      const previewFrame = document.querySelector('[data-dom-id="preview-frame"]');
+      const sceneDesc = document.querySelector('[data-dom-id="scene-description"]');
+      const shotTypeGroup = document.querySelector('[data-dom-id="shot-type-group"]');
+      const cameraMoveSelect = document.querySelector('[data-dom-id="camera-move-select"]');
+      const durationSlider = document.querySelector('[data-dom-id="duration-slider"]');
+      const durationInput = document.querySelector('[data-dom-id="duration-input"]');
+
+      let selectedCards = new Set();
+
+      function selectCard(card, additive) {
+        if (!additive) {
+          // Clear previous multi-selection
+          selectedCards.forEach(c => {
+            c.classList.remove('selected');
+            c.classList.remove('multi-selected');
+          });
+          selectedCards.clear();
+        }
+
+        if (selectedCards.has(card)) {
+          card.classList.remove('selected');
+          card.classList.remove('multi-selected');
+          selectedCards.delete(card);
+        } else {
+          if (selectedCards.size === 0) {
+            card.classList.add('selected');
+          } else {
+            card.classList.add('multi-selected');
+          }
+          selectedCards.add(card);
+        }
+
+        // Update preview with first selected card
+        if (selectedCards.size > 0) {
+          updatePreviewPanel([...selectedCards][0]);
+        }
+      }
+
+      shotCards.forEach(card => {
+        card.addEventListener('click', function(e) {
+          const additive = e.shiftKey || e.ctrlKey || e.metaKey;
+          selectCard(this, additive);
+        });
+      });
+
+      // ---- Update Preview Panel ----
+      function updatePreviewPanel(card) {
+        const shotNum = card.querySelector('.sb-shot-number').textContent;
+        const shotType = card.querySelector('.sb-badge-shot-type').textContent;
+        const cameraMove = card.querySelector('.sb-badge-camera').textContent;
+        const duration = card.querySelector('.sb-badge-duration').textContent;
+        const desc = card.querySelector('.sb-shot-desc').textContent.trim();
+
+        // Update preview overlay
+        const overlayNum = previewFrame.querySelector('.sb-preview-shot-num');
+        const overlayDesc = previewFrame.querySelector('.sb-preview-shot-desc');
+        const overlayBadge = previewFrame.querySelector('.sb-preview-badge');
+
+        if (overlayNum) overlayNum.textContent = shotNum;
+        if (overlayDesc) overlayDesc.textContent = desc.length > 20 ? desc.slice(0, 20) + '...' : desc;
+        if (overlayBadge) overlayBadge.textContent = shotType + ' \u00b7 ' + cameraMove;
+
+        // Update scene description
+        if (sceneDesc) sceneDesc.value = desc;
+
+        // Update shot type buttons
+        if (shotTypeGroup) {
+          shotTypeGroup.querySelectorAll('.sb-btn-group-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.value === shotType);
+          });
+        }
+
+        // Update camera move select
+        if (cameraMoveSelect) {
+          cameraMoveSelect.value = cameraMove;
+        }
+
+        // Update duration
+        const durValue = parseInt(duration);
+        if (!isNaN(durValue)) {
+          if (durationSlider) durationSlider.value = durValue;
+          if (durationInput) durationInput.value = durValue;
+        }
+      }
+
+      // ---- Shot Type Button Group ----
+      if (shotTypeGroup) {
+        shotTypeGroup.addEventListener('click', function(e) {
+          const btn = e.target.closest('.sb-btn-group-btn');
+          if (!btn) return;
+          shotTypeGroup.querySelectorAll('.sb-btn-group-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          // Update preview badge
+          const overlayBadge = previewFrame.querySelector('.sb-preview-badge');
+          if (overlayBadge) {
+            const parts = overlayBadge.textContent.split(' \u00b7 ');
+            overlayBadge.textContent = btn.dataset.value + ' \u00b7 ' + (parts[1] || '');
+          }
+        });
+      }
+
+      // ---- Duration Sync ----
+      function syncDuration(source, target) {
+        const val = parseInt(source.value);
+        if (!isNaN(val) && val >= 1 && val <= 30) {
+          target.value = val;
+        }
+      }
+
+      if (durationSlider && durationInput) {
+        durationSlider.addEventListener('input', function() {
+          syncDuration(durationSlider, durationInput);
+        });
+        durationInput.addEventListener('input', function() {
+          const val = parseInt(durationInput.value);
+          if (!isNaN(val) && val >= 1 && val <= 30) {
+            durationSlider.value = val;
+          }
+        });
+        durationInput.addEventListener('blur', function() {
+          let val = parseInt(durationInput.value);
+          if (isNaN(val) || val < 1) val = 1;
+          if (val > 30) val = 30;
+          durationInput.value = val;
+          durationSlider.value = val;
+        });
+      }
+
+      // ---- Character Tags Toggle ----
+      const charTags = document.querySelectorAll('.sb-char-tag');
+      charTags.forEach(tag => {
+        tag.addEventListener('click', function() {
+          this.classList.toggle('active');
+        });
+      });
+
+      // ---- Camera Move Select ----
+      if (cameraMoveSelect) {
+        cameraMoveSelect.addEventListener('change', function() {
+          const overlayBadge = previewFrame.querySelector('.sb-preview-badge');
+          if (overlayBadge) {
+            const parts = overlayBadge.textContent.split(' \u00b7 ');
+            overlayBadge.textContent = (parts[0] || '') + ' \u00b7 ' + this.value;
+          }
+        });
+      }
+
+      // ---- Button Actions (placeholder) ----
+      document.querySelector('[data-dom-id="btn-preview-shot"]')?.addEventListener('click', function() {
+        console.log('Preview shot');
+      });
+
+      document.querySelector('[data-dom-id="btn-apply-to-subsequent"]')?.addEventListener('click', function() {
+        console.log('Apply to subsequent shots');
+      });
+
+      document.querySelector('[data-dom-id="btn-reset-shot"]')?.addEventListener('click', function() {
+        if (selectedCards.size > 0) {
+          updatePreviewPanel([...selectedCards][0]);
+        }
+      });
+
+      document.querySelector('[data-dom-id="btn-smart-breakdown"]')?.addEventListener('click', function() {
+        console.log('Smart breakdown');
+      });
+
+      document.querySelector('[data-dom-id="btn-toggle-expand"]')?.addEventListener('click', function() {
+        const btn = this;
+        const isExpanded = btn.textContent.includes('折叠');
+        btn.innerHTML = isExpanded
+          ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> 全部展开'
+          : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"/></svg> 全部折叠';
+      });
+
+      document.querySelector('[data-dom-id="btn-batch-generate"]')?.addEventListener('click', function() {
+        console.log('Batch generate video');
+      });
+
+    })();
+  </script>
+
+
+    <style>
+    /* ===== Storyboard Page Layout ===== */
+    .storyboard-layout {
+      display: flex;
+      flex: 1;
+      gap: 0;
+      overflow: hidden;
+      height: 100%;
+    }
+
+    /* ===== Top Toolbar ===== */
+    .sb-toolbar {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-4);
+      padding: var(--df-space-3) var(--df-space-6);
+      background: var(--df-card);
+      border-bottom: 1px solid var(--df-border);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .sb-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-3);
+    }
+
+    .sb-toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-3);
+      margin-left: auto;
+    }
+
+    .sb-toolbar-stats {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-4);
+      font-size: 13px;
+      color: var(--df-muted);
+    }
+
+    .sb-toolbar-stat {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-1);
+    }
+
+    .sb-toolbar-stat-value {
+      font-weight: 600;
+      color: var(--df-foreground);
+    }
+
+    /* Episode Selector */
+    .sb-episode-select {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-2);
+      padding: 0 var(--df-space-4);
+      height: 36px;
+      font-family: var(--df-font-sans);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--df-foreground);
+      background: var(--color-primary-50);
+      border: 1px solid var(--color-primary-200);
+      border-radius: var(--df-radius-md);
+      cursor: pointer;
+      transition: all var(--df-transition-fast);
+    }
+
+    .sb-episode-select:hover {
+      background: var(--color-primary-100);
+      border-color: var(--color-primary-300);
+    }
+
+    .sb-episode-select svg {
+      width: 14px;
+      height: 14px;
+      color: var(--df-primary);
+    }
+
+    /* ===== Left: Shot List Panel ===== */
+    .sb-shot-list {
+      width: 40%;
+      min-width: 360px;
+      border-right: 1px solid var(--df-border);
+      background: var(--color-neutral-50);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sb-shot-list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--df-space-3) var(--df-space-4);
+      background: var(--df-card);
+      border-bottom: 1px solid var(--df-border);
+      flex-shrink: 0;
+    }
+
+    .sb-shot-list-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--df-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .sb-shot-list-count {
+      font-size: 12px;
+      color: var(--df-muted);
+      background: var(--color-neutral-100);
+      padding: 2px var(--df-space-2);
+      border-radius: var(--df-radius-sm);
+    }
+
+    .sb-shot-list-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--df-space-2);
+    }
+
+    .sb-shot-list-body::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .sb-shot-list-body::-webkit-scrollbar-thumb {
+      background: var(--color-neutral-300);
+      border-radius: 2px;
+    }
+
+    /* ===== Shot Card ===== */
+    .sb-shot-card {
+      display: flex;
+      gap: var(--df-space-3);
+      padding: var(--df-space-3);
+      margin-bottom: var(--df-space-2);
+      background: var(--df-card);
+      border: 1px solid var(--df-border);
+      border-left: 3px solid transparent;
+      border-radius: var(--df-radius-md);
+      cursor: pointer;
+      transition: all var(--df-transition-fast);
+      user-select: none;
+      position: relative;
+    }
+
+    .sb-shot-card:hover {
+      border-color: var(--color-neutral-300);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .sb-shot-card.selected {
+      border-left-color: var(--df-primary);
+      border-color: var(--color-primary-200);
+      background: var(--color-primary-50);
+      box-shadow: 0 0 0 1px rgba(79,70,229,0.1);
+    }
+
+    .sb-shot-card.multi-selected {
+      background: var(--color-primary-50);
+      border-color: var(--color-primary-100);
+    }
+
+    /* Drag Handle */
+    .sb-shot-drag {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      flex-shrink: 0;
+      color: var(--color-neutral-400);
+      cursor: grab;
+      opacity: 0;
+      transition: opacity var(--df-transition-fast);
+    }
+
+    .sb-shot-card:hover .sb-shot-drag {
+      opacity: 1;
+    }
+
+    .sb-shot-drag:active {
+      cursor: grabbing;
+    }
+
+    .sb-shot-drag svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Shot Content */
+    .sb-shot-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sb-shot-header {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-2);
+      margin-bottom: var(--df-space-2);
+    }
+
+    .sb-shot-number {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--df-primary);
+      font-family: var(--df-font-mono);
+      background: var(--color-primary-50);
+      padding: 1px var(--df-space-2);
+      border-radius: var(--df-radius-sm);
+    }
+
+    .sb-shot-badges {
+      display: flex;
+      gap: var(--df-space-1);
+      flex-wrap: wrap;
+    }
+
+    .sb-shot-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px var(--df-space-2);
+      border-radius: var(--df-radius-sm);
+      white-space: nowrap;
+    }
+
+    .sb-badge-shot-type {
+      background: var(--color-primary-50);
+      color: var(--color-primary-700);
+    }
+
+    .sb-badge-camera {
+      background: var(--state-info-bg);
+      color: var(--state-info);
+    }
+
+    .sb-badge-duration {
+      background: var(--color-neutral-100);
+      color: var(--color-neutral-600);
+    }
+
+    /* Thumbnail Placeholder */
+    .sb-shot-thumb {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: var(--color-neutral-100);
+      border: 1.5px dashed var(--color-neutral-300);
+      border-radius: var(--df-radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--df-space-2);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .sb-shot-thumb svg {
+      width: 28px;
+      height: 28px;
+      color: var(--color-neutral-400);
+    }
+
+    .sb-shot-thumb-notice {
+      position: absolute;
+      top: var(--df-space-1);
+      right: var(--df-space-1);
+      font-size: 10px;
+      color: var(--state-warning);
+      background: var(--state-warning-bg);
+      padding: 1px 4px;
+      border-radius: 2px;
+      font-weight: 500;
+    }
+
+    /* Shot Info Row */
+    .sb-shot-info-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--df-space-1);
+    }
+
+    .sb-shot-avatars {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .sb-shot-avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1.5px solid var(--df-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      color: #fff;
+      margin-left: -5px;
+    }
+
+    .sb-shot-avatar:first-child {
+      margin-left: 0;
+    }
+
+    .sb-shot-avatar-plus {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 1.5px solid var(--df-card);
+      background: var(--color-neutral-200);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--color-neutral-500);
+      margin-left: -5px;
+    }
+
+    /* Scene Description */
+    .sb-shot-desc {
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--color-neutral-600);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* ===== Divider between panels ===== */
+    .sb-panel-divider {
+      width: 1px;
+      background: var(--df-border);
+      flex-shrink: 0;
+    }
+
+    /* ===== Right: Preview & Edit Panel ===== */
+    .sb-edit-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--df-card);
+    }
+
+    .sb-edit-empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-neutral-400);
+      gap: var(--df-space-3);
+    }
+
+    .sb-edit-empty svg {
+      width: 64px;
+      height: 64px;
+      opacity: 0.3;
+    }
+
+    .sb-edit-empty p {
+      font-size: 14px;
+    }
+
+    .sb-edit-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Video Preview */
+    .sb-preview-area {
+      padding: var(--df-space-4);
+      border-bottom: 1px solid var(--df-border);
+      flex-shrink: 0;
+    }
+
+    .sb-preview-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--df-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: var(--df-space-2);
+    }
+
+    .sb-preview-frame {
+      width: 100%;
+      max-width: 640px;
+      aspect-ratio: 16/9;
+      background: var(--color-neutral-900);
+      border-radius: var(--df-radius-md);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      margin: 0 auto;
+    }
+
+    .sb-preview-frame svg {
+      width: 48px;
+      height: 48px;
+      color: var(--color-neutral-400);
+      opacity: 0.5;
+    }
+
+    .sb-preview-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.7));
+      padding: var(--df-space-4) var(--df-space-4) var(--df-space-3);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      color: #fff;
+      font-size: 12px;
+    }
+
+    .sb-preview-overlay-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .sb-preview-shot-num {
+      font-size: 11px;
+      font-weight: 600;
+      opacity: 0.65;
+      font-family: var(--df-font-mono);
+    }
+
+    .sb-preview-shot-desc {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .sb-preview-badge {
+      font-size: 11px;
+      padding: 2px var(--df-space-2);
+      background: rgba(255,255,255,0.15);
+      border-radius: var(--df-radius-sm);
+      font-weight: 500;
+    }
+
+    .sb-preview-status {
+      position: absolute;
+      top: var(--df-space-3);
+      right: var(--df-space-3);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--state-warning);
+      background: rgba(0,0,0,0.6);
+      padding: 2px var(--df-space-2);
+      border-radius: var(--df-radius-sm);
+    }
+
+    /* Edit Form */
+    .sb-edit-form {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--df-space-4);
+    }
+
+    .sb-edit-form::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .sb-edit-form::-webkit-scrollbar-thumb {
+      background: var(--color-neutral-300);
+      border-radius: 2px;
+    }
+
+    .sb-form-group {
+      margin-bottom: var(--df-space-4);
+    }
+
+    .sb-form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-neutral-700);
+      margin-bottom: var(--df-space-2);
+    }
+
+    /* Shot Type Button Group */
+    .sb-btn-group {
+      display: flex;
+      gap: var(--df-space-1);
+      flex-wrap: wrap;
+    }
+
+    .sb-btn-group-btn {
+      height: 32px;
+      padding: 0 var(--df-space-3);
+      font-size: 12px;
+      font-weight: 500;
+      font-family: var(--df-font-sans);
+      color: var(--color-neutral-600);
+      background: var(--color-neutral-50);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-sm);
+      cursor: pointer;
+      transition: all var(--df-transition-fast);
+    }
+
+    .sb-btn-group-btn:hover {
+      background: var(--color-primary-50);
+      color: var(--df-primary);
+      border-color: var(--color-primary-200);
+    }
+
+    .sb-btn-group-btn.active {
+      background: var(--df-primary);
+      color: #fff;
+      border-color: var(--df-primary);
+    }
+
+    /* Dropdown */
+    .sb-select {
+      height: 36px;
+      padding: 0 var(--df-space-4);
+      font-family: var(--df-font-sans);
+      font-size: 13px;
+      color: var(--df-foreground);
+      background: var(--df-card);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-md);
+      cursor: pointer;
+      outline: none;
+      width: 100%;
+      max-width: 200px;
+      transition: border-color var(--df-transition-fast);
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+
+    .sb-select:focus {
+      border-color: var(--df-primary);
+      box-shadow: 0 0 0 3px var(--df-ring);
+    }
+
+    /* Duration Row */
+    .sb-duration-row {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-3);
+    }
+
+    .sb-duration-slider {
+      flex: 1;
+      max-width: 200px;
+      height: 4px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--color-neutral-200);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .sb-duration-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--df-primary);
+      cursor: pointer;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    .sb-duration-input {
+      width: 60px;
+      height: 32px;
+      text-align: center;
+      font-family: var(--df-font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--df-foreground);
+      background: var(--df-card);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-sm);
+      outline: none;
+    }
+
+    .sb-duration-input:focus {
+      border-color: var(--df-primary);
+      box-shadow: 0 0 0 3px var(--df-ring);
+    }
+
+    .sb-duration-unit {
+      font-size: 13px;
+      color: var(--df-muted);
+      font-weight: 500;
+    }
+
+    /* Character Tags */
+    .sb-char-tags {
+      display: flex;
+      gap: var(--df-space-2);
+      flex-wrap: wrap;
+    }
+
+    .sb-char-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--df-space-1);
+      padding: 4px var(--df-space-3);
+      font-size: 12px;
+      font-weight: 500;
+      font-family: var(--df-font-sans);
+      color: var(--color-neutral-600);
+      background: var(--color-neutral-50);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-full);
+      cursor: pointer;
+      transition: all var(--df-transition-fast);
+      user-select: none;
+    }
+
+    .sb-char-tag:hover {
+      background: var(--color-primary-50);
+      border-color: var(--color-primary-200);
+    }
+
+    .sb-char-tag.active {
+      background: var(--color-primary-50);
+      color: var(--color-primary-700);
+      border-color: var(--color-primary-300);
+    }
+
+    .sb-char-tag-avatar {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* Textarea */
+    .sb-textarea {
+      width: 100%;
+      padding: var(--df-space-3);
+      font-family: var(--df-font-sans);
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--df-foreground);
+      background: var(--df-card);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-md);
+      resize: vertical;
+      min-height: 72px;
+      outline: none;
+      transition: border-color var(--df-transition-fast);
+    }
+
+    .sb-textarea:focus {
+      border-color: var(--df-primary);
+      box-shadow: 0 0 0 3px var(--df-ring);
+    }
+
+    .sb-textarea-mono {
+      font-family: var(--df-font-mono);
+      font-size: 12px;
+      min-height: 100px;
+      background: var(--color-neutral-50);
+      color: var(--color-neutral-800);
+    }
+
+    /* Action Bar */
+    .sb-action-bar {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-3);
+      padding: var(--df-space-3) var(--df-space-4);
+      border-top: 1px solid var(--df-border);
+      background: var(--color-neutral-50);
+      flex-shrink: 0;
+    }
+
+    .sb-action-bar-right {
+      margin-left: auto;
+      display: flex;
+      gap: var(--df-space-2);
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 1024px) {
+      .sb-shot-list {
+        width: 100%;
+        min-width: 0;
+      }
+      .sb-edit-panel {
+        display: none;
+      }
+    }
+  </style>
+</body>
+</html>

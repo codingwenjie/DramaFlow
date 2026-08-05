@@ -1,0 +1,1636 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仪表盘 - DramaFlow</title>
+    <style id="theme-vars">
+/* ============================================
+   DramaFlow Design System — Brand CSS
+   Indigo-Violet palette | Inter + PingFang SC
+   ============================================ */
+
+/* --- CSS Custom Properties --- */
+:root {
+  /* Brand scale — single primary hue (Indigo) */
+  --color-primary-50:  #EEF2FF;
+  --color-primary-100: #E0E7FF;
+  --color-primary-200: #C7D2FE;
+  --color-primary-300: #A5B4FC;
+  --color-primary-400: #818CF8;
+  --color-primary-500: #6366F1;
+  --color-primary-600: #4F46E5;
+  --color-primary-700: #4338CA;
+  --color-primary-800: #3730A3;
+  --color-primary-900: #312E81;
+
+  /* Neutral gray scale */
+  --color-neutral-50:  #F8F9FC;
+  --color-neutral-100: #F1F3F9;
+  --color-neutral-200: #E2E6EF;
+  --color-neutral-300: #C8CFDD;
+  --color-neutral-400: #9CA3B5;
+  --color-neutral-500: #6B7280;
+  --color-neutral-600: #4B5563;
+  --color-neutral-700: #374151;
+  --color-neutral-800: #1F2937;
+  --color-neutral-900: #1A1A2E;
+
+  /* State colors */
+  --state-success: #10B981;
+  --state-success-bg: #ECFDF5;
+  --state-warning: #F59E0B;
+  --state-warning-bg: #FFFBEB;
+  --state-error:   #EF4444;
+  --state-error-bg:   #FEF2F2;
+  --state-info:    #3B82F6;
+  --state-info-bg:    #EFF6FF;
+
+  /* Semantic aliases (mapped to primary + neutral) */
+  --df-background:        var(--color-neutral-50);
+  --df-foreground:        var(--color-neutral-900);
+  --df-card:              #FFFFFF;
+  --df-card-foreground:   var(--color-neutral-900);
+  --df-popover:           #FFFFFF;
+  --df-popover-foreground:var(--color-neutral-900);
+  --df-primary:           var(--color-primary-600);
+  --df-primary-foreground:#FFFFFF;
+  --df-primary-hover:     var(--color-primary-700);
+  --df-muted:             var(--color-neutral-500);
+  --df-muted-foreground:  var(--color-neutral-500);
+  --df-border:            var(--color-neutral-200);
+  --df-input:             var(--color-neutral-100);
+  --df-ring:              var(--color-primary-200);
+
+  /* Radius scale */
+  --df-radius-sm:   4px;
+  --df-radius-md:   8px;
+  --df-radius-lg:   12px;
+  --df-radius-full: 9999px;
+
+  /* Shadow tokens — static surfaces use border, only floating layers get elevation */
+  --df-shadow-card:    0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+  --df-shadow-hover:   0 4px 12px rgba(0,0,0,0.08);
+  --df-shadow-popover: 0 8px 32px rgba(0,0,0,0.12);
+  --df-shadow-modal:   0 16px 48px rgba(0,0,0,0.15);
+
+  /* Typography */
+  --df-font-sans:   'Inter', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+  --df-font-mono:   'JetBrains Mono', 'SF Mono', 'Consolas', 'Monaco', monospace;
+
+  /* Spacing scale (4px grid) */
+  --df-space-1:  4px;
+  --df-space-2:  8px;
+  --df-space-3:  12px;
+  --df-space-4:  16px;
+  --df-space-5:  20px;
+  --df-space-6:  24px;
+  --df-space-8:  32px;
+  --df-space-10: 40px;
+  --df-space-12: 48px;
+  --df-space-16: 64px;
+
+  /* Layout */
+  --df-sidebar-width:   240px;
+  --df-topbar-height:   56px;
+  --df-content-max:     1200px;
+
+  /* Transitions */
+  --df-transition-fast:   150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --df-transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --df-transition-slow:   500ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Base Typography --- */
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--df-foreground);
+  background: var(--df-background);
+}
+
+h1, .h1 { font-size: 28px; font-weight: 700; line-height: 1.3; letter-spacing: -0.02em; }
+h2, .h2 { font-size: 20px; font-weight: 700; line-height: 1.35; }
+h3, .h3 { font-size: 16px; font-weight: 600; line-height: 1.4; }
+h4, .h4 { font-size: 14px; font-weight: 600; line-height: 1.5; }
+
+.text-xs  { font-size: 12px; line-height: 1.5; }
+.text-sm  { font-size: 13px; line-height: 1.5; }
+.text-md  { font-size: 14px; line-height: 1.6; }
+.text-mono { font-family: var(--df-font-mono); font-size: 13px; }
+
+.text-muted  { color: var(--df-muted); }
+.text-primary { color: var(--df-primary); }
+
+/* --- Utility Classes --- */
+.df-card {
+  background: var(--df-card);
+  border: 1px solid var(--df-border);
+  border-radius: var(--df-radius-lg);
+  box-shadow: var(--df-shadow-card);
+  transition: box-shadow var(--df-transition-fast), transform var(--df-transition-fast);
+}
+.df-card:hover {
+  box-shadow: var(--df-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.df-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--df-space-2);
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--df-radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--df-transition-fast);
+  white-space: nowrap;
+  text-decoration: none;
+}
+.df-btn:focus-visible {
+  outline: 2px solid var(--df-ring);
+  outline-offset: 2px;
+}
+
+.df-btn-sm  { height: 36px; padding: 0 var(--df-space-4); font-size: 13px; }
+.df-btn-md  { height: 40px; padding: 0 var(--df-space-5); }
+.df-btn-lg  { height: 48px; padding: 0 var(--df-space-6); font-size: 16px; }
+
+.df-btn-primary {
+  background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-500));
+  color: #FFFFFF;
+  border-color: transparent;
+}
+.df-btn-primary:hover {
+  background: linear-gradient(135deg, var(--color-primary-700), var(--color-primary-600));
+}
+
+.df-btn-secondary {
+  background: transparent;
+  color: var(--df-foreground);
+  border-color: var(--df-border);
+}
+.df-btn-secondary:hover {
+  background: var(--color-neutral-100);
+  border-color: var(--color-neutral-300);
+}
+
+.df-btn-ghost {
+  background: transparent;
+  color: var(--df-muted);
+  border-color: transparent;
+}
+.df-btn-ghost:hover {
+  background: var(--color-neutral-100);
+  color: var(--df-foreground);
+}
+
+.df-input {
+  height: 40px;
+  padding: 0 var(--df-space-4);
+  font-family: var(--df-font-sans);
+  font-size: 14px;
+  color: var(--df-foreground);
+  background: var(--df-card);
+  border: 1px solid var(--df-border);
+  border-radius: var(--df-radius-md);
+  transition: border-color var(--df-transition-fast), box-shadow var(--df-transition-fast);
+  outline: none;
+}
+.df-input:focus {
+  border-color: var(--df-primary);
+  box-shadow: 0 0 0 3px var(--df-ring);
+}
+.df-input::placeholder {
+  color: var(--color-neutral-400);
+}
+
+.df-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--df-space-3);
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--df-radius-full);
+  line-height: 1.5;
+}
+
+.df-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px var(--df-space-3);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-primary-700);
+  background: var(--color-primary-50);
+  border-radius: var(--df-radius-full);
+  border: 1px solid var(--color-primary-100);
+}
+
+.df-divider {
+  border: none;
+  border-top: 1px solid var(--df-border);
+  margin: 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-neutral-300); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-400); }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.1/dist/index.global.js"></script>
+    <script src="https://unpkg.com/lucide@1.8.0/dist/umd/lucide.min.js"></script>
+    <style type="text/tailwindcss">
+  @theme inline {
+    --color-background: var(--df-background);
+    --color-foreground: var(--df-foreground);
+    --color-card: var(--df-card);
+    --color-card-foreground: var(--df-card-foreground);
+    --color-popover: var(--df-popover);
+    --color-popover-foreground: var(--df-popover-foreground);
+    --color-primary: var(--df-primary);
+    --color-primary-foreground: var(--df-primary-foreground);
+    --color-muted: var(--df-muted);
+    --color-muted-foreground: var(--df-muted-foreground);
+    --color-border: var(--df-border);
+    --color-input: var(--df-input);
+    --color-ring: var(--df-ring);
+    --radius-sm: var(--df-radius-sm);
+    --radius-md: var(--df-radius-md);
+    --radius-lg: var(--df-radius-lg);
+  }
+  @layer base {
+    body { background: var(--df-background); color: var(--df-foreground); }
+    td, th { @apply break-words; word-break: break-all; word-break: auto-phrase; }
+    th { @apply whitespace-nowrap; }
+  }
+    </style>
+    <style id="semantic-token-fallback">
+      .bg-background { background-color: var(--df-background); }
+      .text-background { color: var(--df-background); }
+      .border-background { border-color: var(--df-background); }
+      .ring-background { --tw-ring-color: var(--df-background); }
+      .bg-foreground { background-color: var(--df-foreground); }
+      .text-foreground { color: var(--df-foreground); }
+      .border-foreground { border-color: var(--df-foreground); }
+      .ring-foreground { --tw-ring-color: var(--df-foreground); }
+      .bg-card { background-color: var(--df-card); }
+      .text-card { color: var(--df-card); }
+      .border-card { border-color: var(--df-card); }
+      .ring-card { --tw-ring-color: var(--df-card); }
+      .bg-card-foreground { background-color: var(--df-card-foreground); }
+      .text-card-foreground { color: var(--df-card-foreground); }
+      .border-card-foreground { border-color: var(--df-card-foreground); }
+      .ring-card-foreground { --tw-ring-color: var(--df-card-foreground); }
+      .bg-popover { background-color: var(--df-popover); }
+      .text-popover { color: var(--df-popover); }
+      .border-popover { border-color: var(--df-popover); }
+      .ring-popover { --tw-ring-color: var(--df-popover); }
+      .bg-popover-foreground { background-color: var(--df-popover-foreground); }
+      .text-popover-foreground { color: var(--df-popover-foreground); }
+      .border-popover-foreground { border-color: var(--df-popover-foreground); }
+      .ring-popover-foreground { --tw-ring-color: var(--df-popover-foreground); }
+      .bg-primary { background-color: var(--df-primary); }
+      .text-primary { color: var(--df-primary); }
+      .border-primary { border-color: var(--df-primary); }
+      .ring-primary { --tw-ring-color: var(--df-primary); }
+      .bg-primary-foreground { background-color: var(--df-primary-foreground); }
+      .text-primary-foreground { color: var(--df-primary-foreground); }
+      .border-primary-foreground { border-color: var(--df-primary-foreground); }
+      .ring-primary-foreground { --tw-ring-color: var(--df-primary-foreground); }
+      .bg-muted { background-color: var(--df-muted); }
+      .text-muted { color: var(--df-muted); }
+      .border-muted { border-color: var(--df-muted); }
+      .ring-muted { --tw-ring-color: var(--df-muted); }
+      .bg-muted-foreground { background-color: var(--df-muted-foreground); }
+      .text-muted-foreground { color: var(--df-muted-foreground); }
+      .border-muted-foreground { border-color: var(--df-muted-foreground); }
+      .ring-muted-foreground { --tw-ring-color: var(--df-muted-foreground); }
+      .bg-border { background-color: var(--df-border); }
+      .text-border { color: var(--df-border); }
+      .border-border { border-color: var(--df-border); }
+      .ring-border { --tw-ring-color: var(--df-border); }
+      .bg-input { background-color: var(--df-input); }
+      .text-input { color: var(--df-input); }
+      .border-input { border-color: var(--df-input); }
+      .ring-input { --tw-ring-color: var(--df-input); }
+      .bg-ring { background-color: var(--df-ring); }
+      .text-ring { color: var(--df-ring); }
+      .border-ring { border-color: var(--df-ring); }
+      .ring-ring { --tw-ring-color: var(--df-ring); }
+    </style>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      [data-icon] {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-mask-size: contain;
+        mask-size: contain;
+        -webkit-mask-repeat: no-repeat;
+        mask-repeat: no-repeat;
+        -webkit-mask-position: center;
+        mask-position: center;
+        background-color: currentColor;
+      }
+    </style>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ========== SIDEBAR ========== -->
+  <aside class="sidebar">
+
+    <!-- Logo -->
+    <div class="sidebar-logo">
+      <svg class="sidebar-logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="logo-grad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#818CF8"/>
+            <stop offset="100%" stop-color="#4F46E5"/>
+          </linearGradient>
+        </defs>
+        <rect x="4" y="2" width="24" height="28" rx="4" fill="url(#logo-grad)"/>
+        <path d="M10 9h12M10 13h8M10 17h10M10 21h6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+        <path d="M22 22l3 3M25 22l-3 3" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <span class="sidebar-logo-text">DramaFlow</span>
+    </div>
+
+    <!-- Navigation -->
+    <ul class="sidebar-nav">
+      <!-- 仪表盘 -->
+      <li class="sidebar-nav-item active" data-nav-key="dashboard">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="6" height="6" rx="1"/>
+          <rect x="11" y="3" width="6" height="6" rx="1"/>
+          <rect x="3" y="11" width="6" height="6" rx="1"/>
+          <rect x="11" y="11" width="6" height="6" rx="1"/>
+        </svg>
+        <span>仪表盘</span>
+      </li>
+
+      <!-- 剧本工厂 -->
+      <li class="sidebar-nav-item" data-nav-key="script-factory" data-dom-id="nav-script-factory">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 18V2h8l4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/>
+          <polyline points="12 2 12 6 16 6"/>
+          <line x1="8" y1="10" x2="12" y2="10"/>
+          <line x1="8" y1="13" x2="12" y2="13"/>
+          <line x1="8" y1="16" x2="10" y2="16"/>
+        </svg>
+        <span>剧本工厂</span>
+      </li>
+
+      <!-- 角色资产库 -->
+      <li class="sidebar-nav-item" data-nav-key="character-library" data-dom-id="nav-character-library">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="7" cy="7" r="3"/>
+          <path d="M1 18v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1"/>
+          <circle cx="14" cy="7" r="3"/>
+          <path d="M14 12h3a2 2 0 0 1 2 2v1"/>
+        </svg>
+        <span>角色资产库</span>
+      </li>
+
+      <!-- 分镜工作台 -->
+      <li class="sidebar-nav-item" data-nav-key="storyboard" data-dom-id="nav-storyboard">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="7" height="7" rx="1"/>
+          <rect x="11" y="2" width="7" height="7" rx="1"/>
+          <rect x="2" y="11" width="7" height="7" rx="1"/>
+          <rect x="11" y="11" width="7" height="7" rx="1"/>
+        </svg>
+        <span>分镜工作台</span>
+      </li>
+
+      <!-- 视频生成 -->
+      <li class="sidebar-nav-item" data-nav-key="video-generation" data-dom-id="nav-video-generation">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="5 3 15 10 5 17" fill="currentColor" stroke="none" opacity="0.7"/>
+          <polygon points="5 3 15 10 5 17" fill="none" stroke="currentColor"/>
+        </svg>
+        <span>视频生成</span>
+      </li>
+
+      <!-- 后期处理 -->
+      <li class="sidebar-nav-item" data-nav-key="post-production" data-dom-id="nav-post-production">
+        <svg class="sidebar-nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10" cy="10" r="7"/>
+          <circle cx="10" cy="10" r="3" fill="currentColor" stroke="none" opacity="0.5"/>
+          <line x1="10" y1="3" x2="10" y2="7"/>
+          <line x1="10" y1="13" x2="10" y2="17"/>
+          <line x1="3" y1="10" x2="7" y2="10"/>
+          <line x1="13" y1="10" x2="17" y2="10"/>
+        </svg>
+        <span>后期处理</span>
+      </li>
+    </ul>
+
+    <!-- User Area -->
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar">创</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name">创作者</div>
+        <div class="sidebar-user-role">Pro Plan</div>
+      </div>
+      <a class="sidebar-settings-link" href="#" title="设置">
+        <svg class="sidebar-settings-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="8" r="2.5"/>
+          <path d="M8 1.5v1.5M8 13v1.5M3.42 3.42l1.06 1.06M11.52 11.52l1.06 1.06M1.5 8H3M13 8h1.5M3.42 12.58l1.06-1.06M11.52 4.48l1.06-1.06"/>
+        </svg>
+      </a>
+    </div>
+
+  </aside>
+
+  <!-- ========== MAIN AREA ========== -->
+  <div class="main-area">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="breadcrumb">
+          <span class="breadcrumb-current">仪表盘</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span class="page-title" style="font-size:16px;font-weight:600;">仪表盘</span>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="content">
+
+      <!-- ===== Stats Row ===== -->
+      <div class="stats-row" data-dom-id="dashboard-stats">
+        <!-- Stat 1: 全部项目 -->
+        <div class="stat-card" data-dom-id="stat-all-projects">
+          <div class="stat-icon indigo">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="16" height="16" rx="2"/>
+              <path d="M7 2v16M13 2v16M2 7h16M2 13h16"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value">12</div>
+            <div class="stat-label">全部项目</div>
+            <div class="stat-growth">
+              <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 8 7 4 11 8"/>
+                <polyline points="7 4 7 12"/>
+              </svg>
+              +8.3% 较上月
+            </div>
+          </div>
+        </div>
+
+        <!-- Stat 2: 进行中 -->
+        <div class="stat-card" data-dom-id="stat-in-progress">
+          <div class="stat-icon emerald">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="10" cy="10" r="8"/>
+              <polyline points="10 6 10 10 13 13"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value">5</div>
+            <div class="stat-label">进行中</div>
+          </div>
+        </div>
+
+        <!-- Stat 3: 本月成片 -->
+        <div class="stat-card" data-dom-id="stat-monthly-done">
+          <div class="stat-icon amber">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 15 10 5 17"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value">8</div>
+            <div class="stat-label">本月成片</div>
+          </div>
+        </div>
+
+        <!-- Stat 4: 总播放量 -->
+        <div class="stat-card" data-dom-id="stat-total-plays">
+          <div class="stat-icon blue">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6z"/>
+              <polyline points="6 12 9 9 11 11 14 6"/>
+              <polyline points="14 6 14 9"/>
+              <polyline points="14 6 11 6"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-value">1.2M</div>
+            <div class="stat-label">总播放量</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Project List Section ===== -->
+      <div class="section" data-dom-id="section-projects">
+        <div class="section-header">
+          <h2 class="section-title">我的项目</h2>
+          <button class="df-btn df-btn-primary df-btn-md" data-dom-id="btn-new-project">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="3" x2="8" y2="13"/>
+              <line x1="3" y1="8" x2="13" y2="8"/>
+            </svg>
+            新建项目
+          </button>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="filter-tabs" data-dom-id="filter-tabs">
+          <button class="filter-tab active" data-dom-id="filter-all">全部</button>
+          <button class="filter-tab" data-dom-id="filter-in-progress">进行中</button>
+          <button class="filter-tab" data-dom-id="filter-review">待审核</button>
+          <button class="filter-tab" data-dom-id="filter-done">已完成</button>
+        </div>
+
+        <!-- Project Grid -->
+        <div class="project-grid" data-dom-id="project-grid">
+
+          <!-- Project 1 -->
+          <div class="project-card" data-dom-id="project-card-1">
+            <div class="project-cover">
+              <div class="project-cover-placeholder" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <svg width="36" height="36" viewBox="0 0 20 20" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 15 10 5 17"/>
+                </svg>
+              </div>
+              <div class="project-cover-play">
+                <svg viewBox="0 0 40 40" fill="currentColor"><circle cx="20" cy="20" r="20" opacity="0.8"/><polygon points="17 13 17 27 28 20" fill="white"/></svg>
+              </div>
+            </div>
+            <div class="project-info">
+              <div class="project-header">
+                <span class="project-name">重生之豪门千金</span>
+                <span class="project-type-badge badge-nixie">逆袭</span>
+              </div>
+              <div class="project-progress">
+                <div class="project-progress-header">
+                  <span class="project-progress-label">剧本中</span>
+                  <span class="project-progress-pct">35%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-bar-fill" style="width: 35%;"></div>
+                </div>
+              </div>
+              <div class="project-footer">
+                <span class="project-status status-scripting">
+                  <span class="project-status-dot dot-scripting"></span>
+                  剧本中
+                </span>
+                <span class="project-time">更新于 2小时前</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Project 2 -->
+          <div class="project-card" data-dom-id="project-card-2">
+            <div class="project-cover">
+              <div class="project-cover-placeholder" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <svg width="36" height="36" viewBox="0 0 20 20" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 15 10 5 17"/>
+                </svg>
+              </div>
+              <div class="project-cover-play">
+                <svg viewBox="0 0 40 40" fill="currentColor"><circle cx="20" cy="20" r="20" opacity="0.8"/><polygon points="17 13 17 27 28 20" fill="white"/></svg>
+              </div>
+            </div>
+            <div class="project-info">
+              <div class="project-header">
+                <span class="project-name">霸总的白月光回来了</span>
+                <span class="project-type-badge badge-tianchong">甜宠</span>
+              </div>
+              <div class="project-progress">
+                <div class="project-progress-header">
+                  <span class="project-progress-label">角色制作中</span>
+                  <span class="project-progress-pct">52%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-bar-fill warning" style="width: 52%;"></div>
+                </div>
+              </div>
+              <div class="project-footer">
+                <span class="project-status status-character">
+                  <span class="project-status-dot dot-character"></span>
+                  角色制作中
+                </span>
+                <span class="project-time">更新于 5小时前</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Project 3 -->
+          <div class="project-card" data-dom-id="project-card-3">
+            <div class="project-cover">
+              <div class="project-cover-placeholder" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <svg width="36" height="36" viewBox="0 0 20 20" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 15 10 5 17"/>
+                </svg>
+              </div>
+              <div class="project-cover-play">
+                <svg viewBox="0 0 40 40" fill="currentColor"><circle cx="20" cy="20" r="20" opacity="0.8"/><polygon points="17 13 17 27 28 20" fill="white"/></svg>
+              </div>
+            </div>
+            <div class="project-info">
+              <div class="project-header">
+                <span class="project-name">暗夜追凶</span>
+                <span class="project-type-badge badge-xuanyi">悬疑</span>
+              </div>
+              <div class="project-progress">
+                <div class="project-progress-header">
+                  <span class="project-progress-label">视频生成中</span>
+                  <span class="project-progress-pct">78%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-bar-fill" style="width: 78%;"></div>
+                </div>
+              </div>
+              <div class="project-footer">
+                <span class="project-status status-video">
+                  <span class="project-status-dot dot-video"></span>
+                  视频生成中
+                </span>
+                <span class="project-time">更新于 1天前</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Project 4 -->
+          <div class="project-card" data-dom-id="project-card-4">
+            <div class="project-cover">
+              <div class="project-cover-placeholder" style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);">
+                <svg width="36" height="36" viewBox="0 0 20 20" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 15 10 5 17"/>
+                </svg>
+              </div>
+              <div class="project-cover-play">
+                <svg viewBox="0 0 40 40" fill="currentColor"><circle cx="20" cy="20" r="20" opacity="0.8"/><polygon points="17 13 17 27 28 20" fill="white"/></svg>
+              </div>
+            </div>
+            <div class="project-info">
+              <div class="project-header">
+                <span class="project-name">仙尊归来</span>
+                <span class="project-type-badge badge-xuanhuan">玄幻</span>
+              </div>
+              <div class="project-progress">
+                <div class="project-progress-header">
+                  <span class="project-progress-label">后期中</span>
+                  <span class="project-progress-pct">92%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-bar-fill success" style="width: 92%;"></div>
+                </div>
+              </div>
+              <div class="project-footer">
+                <span class="project-status status-post">
+                  <span class="project-status-dot dot-post"></span>
+                  后期中
+                </span>
+                <span class="project-time">更新于 2天前</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Project 5 -->
+          <div class="project-card" data-dom-id="project-card-5">
+            <div class="project-cover">
+              <div class="project-cover-placeholder" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
+                <svg width="36" height="36" viewBox="0 0 20 20" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 15 10 5 17"/>
+                </svg>
+              </div>
+              <div class="project-cover-play">
+                <svg viewBox="0 0 40 40" fill="currentColor"><circle cx="20" cy="20" r="20" opacity="0.8"/><polygon points="17 13 17 27 28 20" fill="white"/></svg>
+              </div>
+            </div>
+            <div class="project-info">
+              <div class="project-header">
+                <span class="project-name">都市狂龙</span>
+                <span class="project-type-badge badge-dushi">都市</span>
+              </div>
+              <div class="project-progress">
+                <div class="project-progress-header">
+                  <span class="project-progress-label">角色制作中</span>
+                  <span class="project-progress-pct">45%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-bar-fill warning" style="width: 45%;"></div>
+                </div>
+              </div>
+              <div class="project-footer">
+                <span class="project-status status-character">
+                  <span class="project-status-dot dot-character"></span>
+                  角色制作中
+                </span>
+                <span class="project-time">更新于 3天前</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Project 6 -->
+          <div class="project-card" data-dom-id="project-card-6">
+            <div class="project-cover">
+              <div class="project-cover-placeholder" style="background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);">
+                <svg width="36" height="36" viewBox="0 0 20 20" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 15 10 5 17"/>
+                </svg>
+              </div>
+              <div class="project-cover-play">
+                <svg viewBox="0 0 40 40" fill="currentColor"><circle cx="20" cy="20" r="20" opacity="0.8"/><polygon points="17 13 17 27 28 20" fill="white"/></svg>
+              </div>
+            </div>
+            <div class="project-info">
+              <div class="project-header">
+                <span class="project-name">致命圈套</span>
+                <span class="project-type-badge badge-xuanyi">悬疑</span>
+              </div>
+              <div class="project-progress">
+                <div class="project-progress-header">
+                  <span class="project-progress-label">视频生成中</span>
+                  <span class="project-progress-pct">65%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-bar-fill" style="width: 65%;"></div>
+                </div>
+              </div>
+              <div class="project-footer">
+                <span class="project-status status-video">
+                  <span class="project-status-dot dot-video"></span>
+                  视频生成中
+                </span>
+                <span class="project-time">更新于 4天前</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===== Quick Actions Section ===== -->
+      <div class="section" data-dom-id="section-quick-actions">
+        <h2 class="section-title" style="margin-bottom: var(--df-space-md);">快速开始</h2>
+        <div class="quick-actions-row" data-dom-id="quick-actions-row">
+
+          <!-- Action 1: 从灵感开始 -->
+          <div class="quick-action-card indigo-bg" data-dom-id="quick-action-inspiration">
+            <div class="quick-action-icon indigo-icon">
+              <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="M11 3v3M11 16v3M3 11h3M16 11h3"/>
+                <line x1="11" y1="8" x2="11" y2="14"/>
+                <line x1="8" y1="11" x2="14" y2="11"/>
+              </svg>
+            </div>
+            <div class="quick-action-body">
+              <div class="quick-action-title">从灵感开始</div>
+              <div class="quick-action-desc">输入一句话创意即可开始</div>
+            </div>
+            <div class="quick-action-arrow">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="8 6 13 11 8 16"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Action 2: 从剧本导入 -->
+          <div class="quick-action-card violet-bg" data-dom-id="quick-action-script-import">
+            <div class="quick-action-icon violet-icon">
+              <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 20V4h8l4 4v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z"/>
+                <polyline points="14 4 14 8 18 8"/>
+                <line x1="8" y1="13" x2="14" y2="13"/>
+                <line x1="8" y1="16" x2="12" y2="16"/>
+              </svg>
+            </div>
+            <div class="quick-action-body">
+              <div class="quick-action-title">从剧本导入</div>
+              <div class="quick-action-desc">上传已有剧本文件</div>
+            </div>
+            <div class="quick-action-arrow">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="8 6 13 11 8 16"/>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Action 3: 从模板开始 -->
+          <div class="quick-action-card blue-bg" data-dom-id="quick-action-template">
+            <div class="quick-action-icon blue-icon">
+              <svg viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="12" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="12" width="7" height="7" rx="1"/>
+                <rect x="12" y="12" width="7" height="7" rx="1"/>
+              </svg>
+            </div>
+            <div class="quick-action-body">
+              <div class="quick-action-title">从模板开始</div>
+              <div class="quick-action-desc">选择预置类型模板</div>
+            </div>
+            <div class="quick-action-arrow">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="8 6 13 11 8 16"/>
+              </svg>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+</div>
+
+
+    <style>
+    /* ============================================
+       DramaFlow Shared Project Shell (inlined)
+       ============================================ */
+
+    /* ===== CSS Variables (Brand System) ===== */
+    :root {
+      --df-sidebar-width: 240px;
+      --df-topbar-height: 56px;
+      --df-primary: #4F46E5;
+      --df-background: #F8F9FC;
+      --df-foreground: #1E1E2E;
+      --df-card: #FFFFFF;
+      --df-border: #E5E7EB;
+      --df-muted: #9CA3AF;
+      --df-font-sans: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+      --df-space-xs: 4px;
+      --df-space-sm: 8px;
+      --df-space-md: 16px;
+      --df-space-lg: 24px;
+      --df-space-xl: 32px;
+      --df-radius-sm: 6px;
+      --df-radius-md: 8px;
+      --df-radius-lg: 12px;
+      --df-transition-fast: 150ms ease;
+      --color-neutral-900: #1A1A2E;
+      --color-primary-600: #4F46E5;
+      --color-primary-50: #EEF2FF;
+    }
+
+    /* ===== Reset & Base ===== */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: var(--df-font-sans);
+      background: var(--df-background);
+      color: var(--df-foreground);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ===== App Layout ===== */
+    .app-layout {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== Sidebar ===== */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: var(--df-sidebar-width);
+      background: var(--color-neutral-900);
+      color: #FFFFFF;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .sidebar::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.15);
+      border-radius: 2px;
+    }
+
+    /* ---- Logo ---- */
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-sm);
+      padding: var(--df-space-lg) var(--df-space-md);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar-logo-icon {
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-logo-text {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, #818CF8 0%, #4F46E5 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ---- Nav ---- */
+    .sidebar-nav {
+      flex: 1;
+      padding: var(--df-space-sm) 0;
+      list-style: none;
+    }
+
+    .sidebar-nav-item {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-sm);
+      padding: var(--df-space-sm) var(--df-space-md);
+      margin: 2px var(--df-space-sm);
+      border-radius: var(--df-radius-sm);
+      font-size: 14px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.7);
+      cursor: pointer;
+      transition: background var(--df-transition-fast), color var(--df-transition-fast), border var(--df-transition-fast);
+      border-left: 3px solid transparent;
+      text-decoration: none;
+      user-select: none;
+    }
+
+    .sidebar-nav-item:hover {
+      background: rgba(255,255,255,0.08);
+      color: #FFFFFF;
+    }
+
+    .sidebar-nav-item.active {
+      background: rgba(99,102,241,0.15);
+      color: #FFFFFF;
+      border-left-color: var(--color-primary-600);
+      font-weight: 500;
+    }
+
+    .sidebar-nav-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    .sidebar-nav-item.active .sidebar-nav-icon,
+    .sidebar-nav-item:hover .sidebar-nav-icon {
+      opacity: 1;
+    }
+
+    /* ---- Bottom User Area ---- */
+    .sidebar-user {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-sm);
+      padding: var(--df-space-md);
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .sidebar-user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366F1 0%, #A78BFA 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .sidebar-user-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sidebar-user-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #FFFFFF;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-user-role {
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+    }
+
+    .sidebar-settings-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--df-radius-sm);
+      color: rgba(255,255,255,0.45);
+      transition: background var(--df-transition-fast), color var(--df-transition-fast);
+      cursor: pointer;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .sidebar-settings-link:hover {
+      background: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.8);
+    }
+
+    .sidebar-settings-icon {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* ===== Main Area ===== */
+    .main-area {
+      margin-left: var(--df-sidebar-width);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== Topbar ===== */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: var(--df-topbar-height);
+      background: var(--df-card);
+      border-bottom: 1px solid var(--df-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--df-space-lg);
+      flex-shrink: 0;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-xs);
+      font-size: 13px;
+      color: var(--df-muted);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-md);
+    }
+
+    /* ===== Content ===== */
+    .content {
+      flex: 1;
+      padding: var(--df-space-lg);
+      overflow-y: auto;
+      background: var(--df-background);
+    }
+
+    .content::-webkit-scrollbar {
+      width: 6px;
+    }
+    .content::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.12);
+      border-radius: 3px;
+    }
+
+    /* ============================================
+       Dashboard Page Specific Styles
+       ============================================ */
+
+    /* ---- Page header ---- */
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--df-space-lg);
+    }
+
+    .page-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--df-foreground);
+      letter-spacing: -0.3px;
+    }
+
+    .page-header-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-3);
+    }
+
+    /* ---- Stat Cards Row ---- */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--df-space-md);
+      margin-bottom: var(--df-space-xl);
+    }
+
+    .stat-card {
+      background: var(--df-card);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-lg);
+      padding: var(--df-space-lg);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--df-space-md);
+      transition: box-shadow var(--df-transition-fast);
+    }
+
+    .stat-card:hover {
+      box-shadow: var(--df-shadow-hover);
+    }
+
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--df-radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .stat-icon.indigo {
+      background: var(--color-primary-50);
+      color: var(--color-primary-600);
+    }
+
+    .stat-icon.emerald {
+      background: var(--state-success-bg);
+      color: var(--state-success);
+    }
+
+    .stat-icon.amber {
+      background: var(--state-warning-bg);
+      color: var(--state-warning);
+    }
+
+    .stat-icon.blue {
+      background: var(--state-info-bg);
+      color: var(--state-info);
+    }
+
+    .stat-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .stat-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--df-foreground);
+      line-height: 1.2;
+      letter-spacing: -0.5px;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--df-muted);
+      margin-top: 2px;
+    }
+
+    .stat-growth {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--state-success);
+      margin-top: 4px;
+    }
+
+    .stat-growth svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    /* ---- Section ---- */
+    .section {
+      margin-bottom: var(--df-space-xl);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--df-space-md);
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--df-foreground);
+    }
+
+    /* ---- Filter Tabs ---- */
+    .filter-tabs {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-xs);
+      margin-bottom: var(--df-space-lg);
+      background: var(--color-neutral-100);
+      border-radius: var(--df-radius-md);
+      padding: 3px;
+      width: fit-content;
+    }
+
+    .filter-tab {
+      padding: 6px var(--df-space-md);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--df-muted);
+      border-radius: var(--df-radius-sm);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      transition: all var(--df-transition-fast);
+      font-family: var(--df-font-sans);
+      white-space: nowrap;
+    }
+
+    .filter-tab:hover {
+      color: var(--df-foreground);
+    }
+
+    .filter-tab.active {
+      background: var(--df-card);
+      color: var(--df-primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    /* ---- Project Grid ---- */
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--df-space-lg);
+    }
+
+    .project-card {
+      background: var(--df-card);
+      border: 1px solid var(--df-border);
+      border-radius: var(--df-radius-lg);
+      overflow: hidden;
+      cursor: pointer;
+      transition: box-shadow var(--df-transition-fast), transform var(--df-transition-fast);
+    }
+
+    .project-card:hover {
+      box-shadow: var(--df-shadow-hover);
+      transform: translateY(-2px);
+    }
+
+    .project-cover {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+    }
+
+    .project-cover-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .project-cover-play {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.3);
+      opacity: 0;
+      transition: opacity var(--df-transition-fast);
+    }
+
+    .project-card:hover .project-cover-play {
+      opacity: 1;
+    }
+
+    .project-cover-play svg {
+      width: 40px;
+      height: 40px;
+      color: white;
+    }
+
+    .project-info {
+      padding: var(--df-space-md);
+    }
+
+    .project-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--df-space-sm);
+      margin-bottom: var(--df-space-sm);
+    }
+
+    .project-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--df-foreground);
+      line-height: 1.4;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .project-type-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px var(--df-space-2);
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: var(--df-radius-full);
+      flex-shrink: 0;
+      line-height: 1.6;
+    }
+
+    .badge-tianchong { background: #FCE7F3; color: #BE185D; }
+    .badge-nixie   { background: #FEF3C7; color: #B45309; }
+    .badge-xuanyi  { background: #E0E7FF; color: #4338CA; }
+    .badge-xuanhuan { background: #D1FAE5; color: #047857; }
+    .badge-dushi   { background: #F3E8FF; color: #7C3AED; }
+
+    .project-progress {
+      margin-bottom: var(--df-space-sm);
+    }
+
+    .project-progress-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .project-progress-label {
+      font-size: 12px;
+      color: var(--df-muted);
+    }
+
+    .project-progress-pct {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--df-foreground);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: var(--color-neutral-100);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--color-primary-500), var(--color-primary-600));
+      transition: width var(--df-transition-normal);
+    }
+
+    .progress-bar-fill.warning {
+      background: linear-gradient(90deg, #F59E0B, #F97316);
+    }
+
+    .progress-bar-fill.success {
+      background: linear-gradient(90deg, #10B981, #059669);
+    }
+
+    .project-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .project-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 2px var(--df-space-2);
+      border-radius: var(--df-radius-sm);
+    }
+
+    .status-scripting   { background: var(--color-primary-50); color: var(--color-primary-700); }
+    .status-character   { background: #FEF3C7; color: #B45309; }
+    .status-video       { background: #E0E7FF; color: #4338CA; }
+    .status-post        { background: #D1FAE5; color: #047857; }
+
+    .project-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot-scripting  { background: var(--color-primary-500); }
+    .dot-character  { background: #F59E0B; }
+    .dot-video      { background: #6366F1; }
+    .dot-post       { background: #10B981; }
+
+    .project-time {
+      font-size: 12px;
+      color: var(--df-muted);
+    }
+
+    /* ---- Quick Actions ---- */
+    .quick-actions-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--df-space-md);
+    }
+
+    .quick-action-card {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--df-space-md);
+      padding: var(--df-space-lg);
+      border-radius: var(--df-radius-lg);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all var(--df-transition-fast);
+    }
+
+    .quick-action-card.indigo-bg {
+      background: var(--color-primary-50);
+      border-color: var(--color-primary-100);
+    }
+    .quick-action-card.indigo-bg:hover {
+      background: var(--color-primary-100);
+      border-color: var(--color-primary-200);
+    }
+
+    .quick-action-card.violet-bg {
+      background: #F5F3FF;
+      border-color: #EDE9FE;
+    }
+    .quick-action-card.violet-bg:hover {
+      background: #EDE9FE;
+      border-color: #DDD6FE;
+    }
+
+    .quick-action-card.blue-bg {
+      background: var(--state-info-bg);
+      border-color: #DBEAFE;
+    }
+    .quick-action-card.blue-bg:hover {
+      background: #DBEAFE;
+      border-color: #BFDBFE;
+    }
+
+    .quick-action-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: var(--df-radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .quick-action-icon.indigo-icon {
+      background: var(--color-primary-600);
+      color: #FFFFFF;
+    }
+
+    .quick-action-icon.violet-icon {
+      background: #7C3AED;
+      color: #FFFFFF;
+    }
+
+    .quick-action-icon.blue-icon {
+      background: #3B82F6;
+      color: #FFFFFF;
+    }
+
+    .quick-action-icon svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .quick-action-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .quick-action-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--df-foreground);
+      margin-bottom: 2px;
+    }
+
+    .quick-action-desc {
+      font-size: 13px;
+      color: var(--df-muted);
+      line-height: 1.5;
+    }
+
+    .quick-action-arrow {
+      align-self: center;
+      flex-shrink: 0;
+      color: var(--df-muted);
+      transition: color var(--df-transition-fast), transform var(--df-transition-fast);
+    }
+
+    .quick-action-card:hover .quick-action-arrow {
+      color: var(--df-foreground);
+      transform: translateX(2px);
+    }
+
+    /* ---- Breadcrumb ---- */
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: var(--df-space-xs);
+      font-size: 13px;
+      color: var(--df-muted);
+    }
+
+    .breadcrumb-sep {
+      color: var(--color-neutral-300);
+    }
+
+    .breadcrumb-current {
+      color: var(--df-foreground);
+      font-weight: 500;
+    }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 1200px) {
+      .stats-row {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .project-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .stats-row {
+        grid-template-columns: 1fr;
+      }
+      .project-grid {
+        grid-template-columns: 1fr;
+      }
+      .quick-actions-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</body>
+</html>
