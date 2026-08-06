@@ -36,15 +36,45 @@ export const DEFAULT_MODELS: AIModelConfig[] = [
     apiKey: '',
     model: 'mock',
     enabled: true,
+    purposes: ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic', 'image'],
+  },
+  {
+    id: 'deepseek-chat',
+    name: 'DeepSeek Chat',
+    provider: 'deepseek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    apiKey: '',
+    model: 'deepseek-chat',
+    enabled: false,
     purposes: ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic'],
   },
   {
-    id: 'openai-gpt4o',
-    name: 'OpenAI GPT-4o',
+    id: 'dashscope-qwen-plus',
+    name: '通义千问 Qwen-Plus',
+    provider: 'dashscope',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    apiKey: '',
+    model: 'qwen-plus',
+    enabled: false,
+    purposes: ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic'],
+  },
+  {
+    id: 'zhipu-glm-4-flash',
+    name: '智谱 GLM-4-Flash',
+    provider: 'zhipu',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    apiKey: '',
+    model: 'glm-4-flash',
+    enabled: false,
+    purposes: ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic'],
+  },
+  {
+    id: 'openai-gpt4o-mini',
+    name: 'OpenAI GPT-4o mini',
     provider: 'openai',
     baseUrl: 'https://api.openai.com/v1',
     apiKey: '',
-    model: 'gpt-4o',
+    model: 'gpt-4o-mini',
     enabled: false,
     purposes: ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic'],
   },
@@ -55,6 +85,16 @@ export const DEFAULT_MODELS: AIModelConfig[] = [
     baseUrl: 'https://api.openai.com/v1',
     apiKey: '',
     model: 'dall-e-3',
+    enabled: false,
+    purposes: ['image'],
+  },
+  {
+    id: 'siliconflow-flux',
+    name: '硅基流动 FLUX',
+    provider: 'siliconflow',
+    baseUrl: 'https://api.siliconflow.cn/v1',
+    apiKey: '',
+    model: 'black-forest-labs/FLUX.1-schnell',
     enabled: false,
     purposes: ['image'],
   },
@@ -77,6 +117,65 @@ export const DEFAULT_MODELS: AIModelConfig[] = [
     model: '',
     enabled: false,
     purposes: ['video'],
+  },
+];
+
+export interface ModelPreset {
+  key: string;
+  label: string;
+  provider: string;
+  baseUrl: string;
+  model: string;
+  description: string;
+  purposes: AIModelPurpose[];
+}
+
+/** 常用服务商预设，配置页一键添加 */
+export const MODEL_PRESETS: ModelPreset[] = [
+  {
+    key: 'deepseek',
+    label: 'DeepSeek',
+    provider: 'deepseek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    model: 'deepseek-chat',
+    description: '性价比高，国产模型，注册送额度',
+    purposes: ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic'],
+  },
+  {
+    key: 'dashscope',
+    label: '通义千问',
+    provider: 'dashscope',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: 'qwen-plus',
+    description: '阿里云百炼，兼容 OpenAI 接口',
+    purposes: ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic'],
+  },
+  {
+    key: 'zhipu',
+    label: '智谱 GLM',
+    provider: 'zhipu',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+    model: 'glm-4-flash',
+    description: '智谱开放平台，Flash 免费额度',
+    purposes: ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic'],
+  },
+  {
+    key: 'openai',
+    label: 'OpenAI',
+    provider: 'openai',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-4o-mini',
+    description: '海外服务，需要可访问的网络',
+    purposes: ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic'],
+  },
+  {
+    key: 'siliconflow',
+    label: '硅基流动 FLUX',
+    provider: 'siliconflow',
+    baseUrl: 'https://api.siliconflow.cn/v1',
+    model: 'black-forest-labs/FLUX.1-schnell',
+    description: '文生图，注册送免费额度，OpenAI 兼容',
+    purposes: ['image'],
   },
 ];
 

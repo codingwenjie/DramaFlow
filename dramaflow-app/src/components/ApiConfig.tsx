@@ -1,4 +1,12 @@
 import React, { useState } from 'react';
+import {
+  loadModelSettings,
+  saveModelSettings,
+  MODEL_PRESETS,
+  testModelConnection,
+  PURPOSE_LABELS,
+} from '../services';
+import type { AIModelConfig, AIModelPurpose, AIModelSettings } from '../data/types';
 
 const C = {
   bg: '#F5F6F8',
@@ -23,7 +31,7 @@ const C = {
   tag: '#EEF0F4',
 };
 
-export const ALL_TASKS = [
+const ALL_TASKS = [
   { id: 'script', label: '剧本', color: '#2563EB', bg: '#EFF4FF', bdr: '#BFCFFF' },
   { id: 'storyboard', label: '分镜', color: '#7C3AED', bg: '#F5F3FF', bdr: '#DDD6FE' },
   { id: 'image', label: '图像', color: '#0891B2', bg: '#ECFEFF', bdr: '#A5F3FC' },
@@ -35,332 +43,552 @@ export const ALL_TASKS = [
 
 const taskMap = Object.fromEntries(ALL_TASKS.map((t) => [t.id, t]));
 
-interface Model {
-  id: string;
-  provider: string;
-  name: string;
-  baseUrl: string;
-  apiKeyRef: string;
-  tasks: string[];
-  enabled: boolean;
-  inPrice: number;
-  outPrice: number;
-  unit: string;
-  custom: boolean;
-}
-
-const DEFAULT_MODELS: Model[] = [
-  { id: 'gpt4o', provider: 'OpenAI', name: 'GPT-4o', baseUrl: 'https://api.openai.com/v1', apiKeyRef: 'openai', tasks: ['script', 'polish'], enabled: true, inPrice: 5.0, outPrice: 15.0, unit: '$/1M tokens', custom: false },
-  { id: 'gpt4o-mini', provider: 'OpenAI', name: 'GPT-4o mini', baseUrl: 'https://api.openai.com/v1', apiKeyRef: 'openai', tasks: ['script'], enabled: false, inPrice: 0.15, outPrice: 0.6, unit: '$/1M tokens', custom: false },
-  { id: 'claude3', provider: 'Anthropic', name: 'Claude 3.5 Sonnet', baseUrl: 'https://api.anthropic.com', apiKeyRef: 'anthropic', tasks: ['storyboard', 'character'], enabled: true, inPrice: 3.0, outPrice: 15.0, unit: '$/1M tokens', custom: false },
-  { id: 'qwen', provider: '阿里云', name: 'Qwen-Max', baseUrl: 'https://dashscope.aliyuncs.com/v1', apiKeyRef: 'aliyun', tasks: ['script'], enabled: true, inPrice: 0.04, outPrice: 0.12, unit: '\u00a5/1K tokens', custom: false },
-  { id: 'stable', provider: 'Stability', name: 'SDXL Turbo', baseUrl: 'https://api.stability.ai/v1', apiKeyRef: 'stability', tasks: ['image'], enabled: false, inPrice: 0.002, outPrice: 0, unit: '$/image', custom: false },
-  { id: 'flux', provider: 'Black Forest', name: 'FLUX.1 Pro', baseUrl: 'https://api.bfl.ml/v1', apiKeyRef: 'bfl', tasks: ['image', 'storyboard'], enabled: false, inPrice: 0.055, outPrice: 0, unit: '$/image', custom: false },
-  { id: 'elevenlabs', provider: 'ElevenLabs', name: 'Multilingual v2', baseUrl: 'https://api.elevenlabs.io/v1', apiKeyRef: 'elevenlabs', tasks: ['dubbing'], enabled: true, inPrice: 0.3, outPrice: 0, unit: '$/1K chars', custom: false },
-  { id: 'runway', provider: 'Runway', name: 'Gen-3 Alpha', baseUrl: 'https://api.runwayml.com/v1', apiKeyRef: 'runway', tasks: ['video'], enabled: false, inPrice: 0.05, outPrice: 0, unit: '$/second', custom: false },
-  { id: 'kling', provider: '快手', name: 'Kling AI 1.6', baseUrl: 'https://api.kling.kuaishou.com/v1', apiKeyRef: 'kling', tasks: ['video'], enabled: false, inPrice: 0.14, outPrice: 0, unit: '\u00a5/second', custom: false },
-];
-
-const API_KEY_DEFS = [
-  { id: 'openai', label: 'OpenAI', placeholder: 'sk-proj-\u2026' },
-  { id: 'anthropic', label: 'Anthropic', placeholder: 'sk-ant-\u2026' },
-  { id: 'aliyun', label: '阿里云 DashScope', placeholder: 'sk-\u2026' },
-  { id: 'stability', label: 'Stability AI', placeholder: 'sk-\u2026' },
-  { id: 'bfl', label: 'Black Forest (FLUX)', placeholder: '\u2026' },
-  { id: 'elevenlabs', label: 'ElevenLabs', placeholder: 'el_\u2026' },
-  { id: 'runway', label: 'Runway', placeholder: 'rw-\u2026' },
-  { id: 'kling', label: '快手 Kling', placeholder: 'kling-\u2026' },
-];
-
-const PROVIDER_COLORS: Record<string, { color: string; bg: string }> = {
-  'OpenAI': { color: '#16A34A', bg: '#ECFDF5' },
-  'Anthropic': { color: '#7C3AED', bg: '#F5F3FF' },
-  '阿里云': { color: '#E69500', bg: '#FFF3D0' },
-  'Stability': { color: '#2563EB', bg: '#EFF4FF' },
-  'Black Forest': { color: '#0891B2', bg: '#ECFEFF' },
-  'ElevenLabs': { color: '#DC2626', bg: '#FEF2F2' },
-  'Runway': { color: '#DB2777', bg: '#FDF2F8' },
-  '快手': { color: '#D97706', bg: '#FFFBEB' },
+const PROVIDER_META: Record<string, { label: string; color: string; bg: string }> = {
+  mock: { label: '内置', color: '#5A6070', bg: '#EEF0F4' },
+  deepseek: { label: 'DeepSeek', color: '#2563EB', bg: '#EFF4FF' },
+  dashscope: { label: '通义千问', color: '#E69500', bg: '#FFF3D0' },
+  zhipu: { label: '智谱 GLM', color: '#0891B2', bg: '#ECFEFF' },
+  openai: { label: 'OpenAI', color: '#16A34A', bg: '#ECFDF5' },
+  custom: { label: '自定义', color: '#7C3AED', bg: '#F5F3FF' },
 };
 
-const DAILY = [
-  { date: '7/23', script: 8200, storyboard: 14200, dubbing: 3800, video: 0 },
-  { date: '7/24', script: 12400, storyboard: 22000, dubbing: 5200, video: 0 },
-  { date: '7/25', script: 6800, storyboard: 18400, dubbing: 4100, video: 18000 },
-  { date: '7/26', script: 9600, storyboard: 16800, dubbing: 6800, video: 0 },
-  { date: '7/27', script: 14200, storyboard: 24600, dubbing: 8200, video: 24000 },
-  { date: '7/28', script: 4200, storyboard: 8400, dubbing: 2100, video: 0 },
-  { date: '7/29', script: 7800, storyboard: 12000, dubbing: 3600, video: 0 },
-  { date: '7/30', script: 16800, storyboard: 28400, dubbing: 9200, video: 32000 },
-  { date: '7/31', script: 11200, storyboard: 19600, dubbing: 5800, video: 18000 },
-  { date: '8/1', script: 9400, storyboard: 21200, dubbing: 7400, video: 0 },
-  { date: '8/2', script: 13600, storyboard: 26000, dubbing: 8800, video: 24000 },
-  { date: '8/3', script: 8200, storyboard: 14400, dubbing: 4200, video: 0 },
-  { date: '8/4', script: 10800, storyboard: 18800, dubbing: 6200, video: 18000 },
-  { date: '8/5', script: 14200, storyboard: 22400, dubbing: 7800, video: 0 },
-];
-
-type TabKey = 'models' | 'tokens' | 'billing';
+type TabKey = 'models' | 'defaults';
 
 const ApiConfig: React.FC = () => {
+  const [settings, setSettings] = useState<AIModelSettings>(() => loadModelSettings());
   const [tab, setTab] = useState<TabKey>('models');
-  const [models, setModels] = useState<Model[]>(DEFAULT_MODELS);
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>({
-    openai: 'sk-proj-\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022',
-    anthropic: 'sk-ant-api03-\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022',
-    aliyun: '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022',
-    elevenlabs: 'el_\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022',
-  });
-  const [budget, setBudget] = useState('500');
+  const [filterTask, setFilterTask] = useState<string | null>(null);
+  const [editingModel, setEditingModel] = useState<AIModelConfig | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, { ok: boolean; message: string }>>({});
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const update = (next: AIModelSettings) => {
+    setSettings(next);
+    saveModelSettings(next);
+  };
+
+  const toggleEnabled = (id: string) => {
+    update({
+      ...settings,
+      models: settings.models.map((m) => (m.id === id ? { ...m, enabled: !m.enabled } : m)),
+    });
+  };
+
+  const deleteModel = (id: string) => {
+    if (id === 'mock-default') return;
+    if (!window.confirm('确定删除该模型配置？')) return;
+    const defaults = { ...settings.defaults };
+    for (const key of Object.keys(defaults) as AIModelPurpose[]) {
+      if (defaults[key] === id) delete defaults[key];
+    }
+    update({ ...settings, models: settings.models.filter((m) => m.id !== id), defaults });
+  };
+
+  const saveModel = (m: AIModelConfig) => {
+    const exists = settings.models.some((x) => x.id === m.id);
+    update({
+      ...settings,
+      models: exists ? settings.models.map((x) => (x.id === m.id ? m : x)) : [...settings.models, m],
+    });
+    setShowModal(false);
+    setEditingModel(null);
+  };
+
+  const addPreset = (key: string) => {
+    const preset = MODEL_PRESETS.find((p) => p.key === key);
+    if (!preset) return;
+    const existing = settings.models.find((m) => m.id === `preset-${preset.key}`);
+    if (existing) {
+      setNotice(`「${preset.label}」已添加，直接填写 API Key 并测试连接即可`);
+      return;
+    }
+    const model: AIModelConfig = {
+      id: `preset-${preset.key}`,
+      name: `${preset.label} ${preset.model}`,
+      provider: preset.provider,
+      baseUrl: preset.baseUrl,
+      apiKey: '',
+      model: preset.model,
+      enabled: true,
+      purposes: preset.purposes,
+    };
+    // 自动接管仍指向 mock 的用途默认模型，让新服务商立即生效
+    const newDefaults = { ...settings.defaults };
+    for (const p of preset.purposes) {
+      if (!newDefaults[p] || newDefaults[p] === 'mock-default') newDefaults[p] = model.id;
+    }
+    update({ ...settings, models: [...settings.models, model], defaults: newDefaults });
+    setNotice(`已添加「${preset.label}」，请填写 API Key 并测试连接`);
+  };
+
+  const handleTest = async (m: AIModelConfig) => {
+    setTestingId(m.id);
+    const r = await testModelConnection(m);
+    setTestResults((prev) => ({
+      ...prev,
+      [m.id]: { ok: r.ok, message: r.ok ? `连接正常 · ${r.latencyMs}ms` : r.error || '连接失败' },
+    }));
+    setTestingId(null);
+  };
+
+  const filtered = filterTask ? settings.models.filter((m) => m.purposes.includes(filterTask as AIModelPurpose)) : settings.models;
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: 'Inter, sans-serif' }}>
       <div style={{ background: C.white, borderBottom: `1px solid ${C.border}`, display: 'flex', padding: '0 24px', flexShrink: 0 }}>
-        {([['models', '模型配置'], ['tokens', 'Token 统计'], ['billing', '费用与预算']] as [TabKey, string][]).map(([id, label]) => (
-          <button key={id} onClick={() => setTab(id)}
-            style={{ padding: '10px 18px', background: 'transparent', border: 'none', borderBottom: tab === id ? `2px solid ${C.amber}` : '2px solid transparent', color: tab === id ? C.text : C.textSub, fontSize: 12, cursor: 'pointer', fontWeight: tab === id ? 500 : 400 }}>
+        {([['models', '模型配置'], ['defaults', '默认模型分配']] as [TabKey, string][]).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            style={{
+              padding: '10px 18px',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: tab === id ? `2px solid ${C.amber}` : '2px solid transparent',
+              color: tab === id ? C.text : C.textSub,
+              fontSize: 12,
+              cursor: 'pointer',
+              fontWeight: tab === id ? 500 : 400,
+            }}
+          >
             {label}
           </button>
         ))}
       </div>
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', background: C.bg }}>
-        {tab === 'models' && <ModelsTab models={models} setModels={setModels} apiKeys={apiKeys} setApiKeys={setApiKeys} />}
-        {tab === 'tokens' && <TokensTab />}
-        {tab === 'billing' && <BillingTab budget={budget} setBudget={setBudget} />}
+        <div
+          style={{
+            background: C.amberBg,
+            border: `1px solid ${C.amberBdr}`,
+            borderRadius: 6,
+            padding: '10px 14px',
+            fontSize: 11,
+            color: '#7A5500',
+            marginBottom: 16,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 12,
+          }}
+        >
+          <span>API Key 仅保存在本机浏览器中，不会上传到任何服务器。请勿在公共设备上使用。</span>
+          {notice && (
+            <button
+              onClick={() => setNotice(null)}
+              style={{ background: 'transparent', border: 'none', color: '#7A5500', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}
+            >
+              {notice} ✕
+            </button>
+          )}
+        </div>
+
+        {tab === 'models' ? (
+          <ModelsTab
+            models={filtered}
+            allModels={settings.models}
+            filterTask={filterTask}
+            setFilterTask={setFilterTask}
+            onToggle={toggleEnabled}
+            onDelete={deleteModel}
+            onEdit={(m) => {
+              setEditingModel(m);
+              setShowModal(true);
+            }}
+            onAddCustom={() => {
+              setEditingModel(null);
+              setShowModal(true);
+            }}
+            onAddPreset={addPreset}
+            onTest={handleTest}
+            testingId={testingId}
+            testResults={testResults}
+          />
+        ) : (
+          <DefaultsTab settings={settings} onSetDefault={(purpose, modelId) => update({ ...settings, defaults: { ...settings.defaults, [purpose]: modelId } })} />
+        )}
       </div>
+
+      {showModal && (
+        <ModelModal
+          model={editingModel}
+          onSave={saveModel}
+          onClose={() => {
+            setShowModal(false);
+            setEditingModel(null);
+          }}
+        />
+      )}
     </div>
   );
 };
 
-function ModelsTab({ models, setModels, apiKeys, setApiKeys }: {
-  models: Model[];
-  setModels: (m: Model[]) => void;
-  apiKeys: Record<string, string>;
-  setApiKeys: (k: Record<string, string>) => void;
+function ModelsTab(props: {
+  models: AIModelConfig[];
+  allModels: AIModelConfig[];
+  filterTask: string | null;
+  setFilterTask: (v: string | null) => void;
+  onToggle: (id: string) => void;
+  onDelete: (id: string) => void;
+  onEdit: (m: AIModelConfig) => void;
+  onAddCustom: () => void;
+  onAddPreset: (key: string) => void;
+  onTest: (m: AIModelConfig) => void;
+  testingId: string | null;
+  testResults: Record<string, { ok: boolean; message: string }>;
 }) {
-  const [filterTask, setFilterTask] = useState<string | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingModel, setEditingModel] = useState<Model | null>(null);
-  const [showKeyFor, setShowKeyFor] = useState<string | null>(null);
-
-  const filtered = filterTask ? models.filter((m) => m.tasks.includes(filterTask)) : models;
-
-  const toggleModel = (id: string) =>
-    setModels(models.map((m) => (m.id === id ? { ...m, enabled: !m.enabled } : m)));
-
-  const deleteModel = (id: string) =>
-    setModels(models.filter((m) => m.id !== id));
-
-  const saveModel = (m: Model) => {
-    if (models.find((x) => x.id === m.id)) {
-      setModels(models.map((x) => (x.id === m.id ? m : x)));
-    } else {
-      setModels([...models, m]);
-    }
-    setEditingModel(null);
-    setShowAddModal(false);
-  };
-
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 284px', gap: 24 }}>
-      <div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
-          <button onClick={() => setFilterTask(null)}
-            style={{ padding: '4px 10px', background: filterTask === null ? C.amber : C.white, border: `1px solid ${filterTask === null ? C.amber : C.border}`, borderRadius: 20, fontSize: 11, color: filterTask === null ? '#fff' : C.textSub, cursor: 'pointer', fontWeight: filterTask === null ? 500 : 400 }}>
-            全部
-          </button>
-          {ALL_TASKS.map((t) => (
-            <button key={t.id} onClick={() => setFilterTask(filterTask === t.id ? null : t.id)}
-              style={{ padding: '4px 10px', background: filterTask === t.id ? t.bg : C.white, border: `1px solid ${filterTask === t.id ? t.bdr : C.border}`, borderRadius: 20, fontSize: 11, color: filterTask === t.id ? t.color : C.textSub, cursor: 'pointer', fontWeight: filterTask === t.id ? 500 : 400 }}>
-              {t.label}
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, maxWidth: 980 }}>
+      <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 6, padding: '14px 16px' }}>
+        <div style={{ fontSize: 11, color: C.textMute, marginBottom: 10 }}>快捷添加服务商（自动填充 Base URL 与模型名）</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {MODEL_PRESETS.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => props.onAddPreset(p.key)}
+              title={p.description}
+              style={{
+                padding: '6px 14px',
+                background: C.amberBg,
+                border: `1px solid ${C.amberBdr}`,
+                borderRadius: 20,
+                fontSize: 11,
+                color: '#7A5500',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              + {p.label}
             </button>
           ))}
-          <div style={{ flex: 1 }} />
-          <button onClick={() => { setEditingModel(null); setShowAddModal(true); }}
-            style={{ padding: '6px 14px', background: C.amber, border: 'none', borderRadius: 5, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif", display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+          <button
+            onClick={props.onAddCustom}
+            style={{
+              padding: '6px 14px',
+              background: C.purpleBg,
+              border: `1px solid #DDD6FE`,
+              borderRadius: 20,
+              fontSize: 11,
+              color: C.purple,
+              cursor: 'pointer',
+              fontWeight: 500,
+            }}
+          >
             + 自定义模型
           </button>
         </div>
-
-        <div style={{ display: 'grid', gap: 8 }}>
-          {filtered.map((m) => (
-            <ModelCard key={m.id} model={m} onToggle={() => toggleModel(m.id)} onEdit={() => { setEditingModel(m); setShowAddModal(true); }} onDelete={() => deleteModel(m.id)} />
-          ))}
-          {filtered.length === 0 && (
-            <div style={{ padding: '32px', textAlign: 'center', color: C.textMute, fontSize: 12 }}>没有符合该标签的模型</div>
-          )}
-        </div>
       </div>
 
-      <div>
-        <SectionTitle>API 密钥</SectionTitle>
-        <div style={{ display: 'grid', gap: 8 }}>
-          {API_KEY_DEFS.map((k) => {
-            const hasKey = !!apiKeys[k.id];
-            return (
-              <div key={k.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 5, padding: '10px 12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, color: C.textSub, fontWeight: 500 }}>{k.label}</span>
-                  {hasKey ? <span style={{ fontSize: 9, color: C.green, background: C.greenBg, border: `1px solid ${C.greenBdr}`, padding: '1px 5px', borderRadius: 3 }}>已配置</span>
-                    : <span style={{ fontSize: 9, color: C.textMute, background: C.tag, padding: '1px 5px', borderRadius: 3 }}>未配置</span>}
-                </div>
-                <div style={{ display: 'flex', gap: 5 }}>
-                  <input type={showKeyFor === k.id ? 'text' : 'password'} value={apiKeys[k.id] || ''}
-                    onChange={(e) => setApiKeys({ ...apiKeys, [k.id]: e.target.value })} placeholder={k.placeholder}
-                    style={{ flex: 1, padding: '5px 8px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, fontSize: 10, color: C.text, outline: 'none', fontFamily: "'JetBrains Mono', monospace", minWidth: 0 }} />
-                  <button onClick={() => setShowKeyFor(showKeyFor === k.id ? null : k.id)}
-                    style={{ padding: '5px 7px', background: C.tag, border: `1px solid ${C.border}`, borderRadius: 4, color: C.textSub, fontSize: 10, cursor: 'pointer' }}>
-                    {showKeyFor === k.id ? '\uD83D\uDE48' : '\uD83D\uDC41'}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div style={{ marginTop: 8, background: C.white, border: `1px solid ${C.border}`, borderRadius: 5, padding: '10px 12px' }}>
-          <div style={{ fontSize: 11, color: C.textSub, fontWeight: 500, marginBottom: 6 }}>自定义 Key（custom）</div>
-          <input placeholder="用于自定义模型的 API Key"
-            style={{ width: '100%', padding: '5px 8px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, fontSize: 10, color: C.text, outline: 'none', fontFamily: "'JetBrains Mono', monospace", boxSizing: 'border-box' }} />
-        </div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button
+          onClick={() => props.setFilterTask(null)}
+          style={{
+            padding: '4px 10px',
+            background: props.filterTask === null ? C.amber : C.white,
+            border: `1px solid ${props.filterTask === null ? C.amber : C.border}`,
+            borderRadius: 20,
+            fontSize: 11,
+            color: props.filterTask === null ? '#fff' : C.textSub,
+            cursor: 'pointer',
+            fontWeight: props.filterTask === null ? 500 : 400,
+          }}
+        >
+          全部
+        </button>
+        {ALL_TASKS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => props.setFilterTask(props.filterTask === t.id ? null : t.id)}
+            style={{
+              padding: '4px 10px',
+              background: props.filterTask === t.id ? t.bg : C.white,
+              border: `1px solid ${props.filterTask === t.id ? t.bdr : C.border}`,
+              borderRadius: 20,
+              fontSize: 11,
+              color: props.filterTask === t.id ? t.color : C.textSub,
+              cursor: 'pointer',
+              fontWeight: props.filterTask === t.id ? 500 : 400,
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {showAddModal && (
-        <ModelModal model={editingModel} onSave={saveModel} onClose={() => { setShowAddModal(false); setEditingModel(null); }} />
-      )}
+      <div style={{ display: 'grid', gap: 8 }}>
+        {props.models.map((m) => (
+          <ModelCard
+            key={m.id}
+            model={m}
+            onToggle={() => props.onToggle(m.id)}
+            onEdit={() => props.onEdit(m)}
+            onDelete={() => props.onDelete(m.id)}
+            onTest={() => props.onTest(m)}
+            testing={props.testingId === m.id}
+            testResult={props.testResults[m.id]}
+          />
+        ))}
+        {props.models.length === 0 && (
+          <div style={{ padding: '32px', textAlign: 'center', color: C.textMute, fontSize: 12 }}>
+            没有符合该用途的模型，点击上方按钮添加
+          </div>
+        )}
+      </div>
+
+      <div style={{ fontSize: 10, color: C.textMute }}>
+        当前共 {props.allModels.length} 个模型 · 启用 {props.allModels.filter((m) => m.enabled).length} 个
+      </div>
     </div>
   );
 }
 
-function ModelCard({ model, onToggle, onEdit, onDelete }: { model: Model; onToggle: () => void; onEdit: () => void; onDelete: () => void }) {
-  const prov = PROVIDER_COLORS[model.provider] || { color: C.textSub, bg: C.tag };
+function ModelCard(props: {
+  model: AIModelConfig;
+  onToggle: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onTest: () => void;
+  testing: boolean;
+  testResult?: { ok: boolean; message: string };
+}) {
+  const m = props.model;
+  const prov = PROVIDER_META[m.provider] || PROVIDER_META.custom;
+  const isMock = m.provider === 'mock';
+  const result = props.testResult;
   return (
-    <div style={{ background: C.white, border: `1px solid ${model.enabled ? C.border : '#ECEEF2'}`, borderRadius: 6, padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'flex-start', opacity: model.enabled ? 1 : 0.65 }}>
-      <div style={{ width: 34, height: 34, borderRadius: 6, background: prov.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <span style={{ fontSize: 9, color: prov.color, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '-0.02em', textAlign: 'center', lineHeight: 1.2 }}>
-          {model.provider.slice(0, 3)}
+    <div
+      style={{
+        background: C.white,
+        border: `1px solid ${m.enabled ? C.border : '#ECEEF2'}`,
+        borderRadius: 6,
+        padding: '12px 14px',
+        display: 'flex',
+        gap: 12,
+        alignItems: 'flex-start',
+        opacity: m.enabled ? 1 : 0.65,
+      }}
+    >
+      <div
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: 6,
+          background: prov.bg,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <span style={{ fontSize: 9, color: prov.color, fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '-0.02em' }}>
+          {prov.label.slice(0, 3)}
         </span>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{model.name}</span>
-          <span style={{ fontSize: 9, background: prov.bg, color: prov.color, padding: '1px 5px', borderRadius: 3, whiteSpace: 'nowrap' }}>{model.provider}</span>
-          {model.custom && <span style={{ fontSize: 9, background: C.amberBg, color: C.amber, border: `1px solid ${C.amberBdr}`, padding: '1px 5px', borderRadius: 3 }}>自定义</span>}
+          <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{m.name}</span>
+          <span style={{ fontSize: 9, background: prov.bg, color: prov.color, padding: '1px 5px', borderRadius: 3, whiteSpace: 'nowrap' }}>{prov.label}</span>
+          {isMock && <span style={{ fontSize: 9, background: C.greenBg, color: C.green, border: `1px solid ${C.greenBdr}`, padding: '1px 5px', borderRadius: 3 }}>离线可用</span>}
         </div>
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
-          {model.tasks.map((tid) => {
+          {m.purposes.map((tid) => {
             const t = taskMap[tid];
             if (!t) return null;
-            return <span key={tid} style={{ fontSize: 9, background: t.bg, color: t.color, border: `1px solid ${t.bdr}`, padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>{t.label}</span>;
+            return (
+              <span key={tid} style={{ fontSize: 9, background: t.bg, color: t.color, border: `1px solid ${t.bdr}`, padding: '2px 7px', borderRadius: 20, fontWeight: 500 }}>
+                {t.label}
+              </span>
+            );
           })}
         </div>
-        <div style={{ fontSize: 10, color: C.textMute, fontFamily: "'JetBrains Mono', monospace", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{model.baseUrl}</div>
+        <div style={{ fontSize: 10, color: C.textMute, fontFamily: "'JetBrains Mono', monospace", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {m.baseUrl || '（未配置 Base URL）'} · {m.model || '（未填模型名）'}
+        </div>
+        {result && (
+          <div style={{ marginTop: 6, fontSize: 10, color: result.ok ? C.green : C.red, fontFamily: "'JetBrains Mono', monospace" }}>
+            {result.ok ? '✓' : '✗'} {result.message}
+          </div>
+        )}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 11, color: C.amber, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>
-            {model.inPrice > 0 && model.outPrice > 0 ? `${model.inPrice} / ${model.outPrice}` : `${model.inPrice || model.outPrice || '\u2014'}`}
-          </div>
-          <div style={{ fontSize: 9, color: C.textMute }}>{model.unit}</div>
-        </div>
         <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-          <button onClick={onEdit} style={{ padding: '3px 8px', background: C.tag, border: `1px solid ${C.border}`, borderRadius: 3, color: C.textSub, fontSize: 10, cursor: 'pointer' }}>编辑</button>
-          {model.custom && <button onClick={onDelete} style={{ padding: '3px 8px', background: C.redBg, border: '1px solid #FCA5A5', borderRadius: 3, color: C.red, fontSize: 10, cursor: 'pointer' }}>删除</button>}
-          <Toggle on={model.enabled} onClick={onToggle} />
+          {!isMock && (
+            <button
+              onClick={props.onTest}
+              disabled={props.testing || !m.apiKey || !m.baseUrl}
+              style={{
+                padding: '3px 8px',
+                background: props.testing ? C.tag : C.blueBg,
+                border: `1px solid ${props.testing ? C.border : C.blueBdr}`,
+                borderRadius: 3,
+                color: props.testing ? C.textMute : C.blue,
+                fontSize: 10,
+                cursor: props.testing || !m.apiKey ? 'default' : 'pointer',
+              }}
+            >
+              {props.testing ? '测试中…' : '测试连接'}
+            </button>
+          )}
+          <button onClick={props.onEdit} style={{ padding: '3px 8px', background: C.tag, border: `1px solid ${C.border}`, borderRadius: 3, color: C.textSub, fontSize: 10, cursor: 'pointer' }}>
+            编辑
+          </button>
+          {!isMock && (
+            <button onClick={props.onDelete} style={{ padding: '3px 8px', background: C.redBg, border: '1px solid #FCA5A5', borderRadius: 3, color: C.red, fontSize: 10, cursor: 'pointer' }}>
+              删除
+            </button>
+          )}
+          <Toggle on={m.enabled} onClick={props.onToggle} />
         </div>
       </div>
     </div>
   );
 }
 
-function ModelModal({ model, onSave, onClose }: { model: Model | null; onSave: (m: Model) => void; onClose: () => void }) {
+function ModelModal(props: { model: AIModelConfig | null; onSave: (m: AIModelConfig) => void; onClose: () => void }) {
+  const model = props.model;
   const isEdit = !!model;
   const [form, setForm] = useState({
-    provider: model?.provider || '',
     name: model?.name || '',
+    provider: model?.provider || 'custom',
     baseUrl: model?.baseUrl || '',
-    apiKeyRef: model?.apiKeyRef || 'custom',
-    tasks: model?.tasks || [] as string[],
-    inPrice: model ? String(model.inPrice) : '',
-    outPrice: model ? String(model.outPrice) : '',
-    unit: model?.unit || '$/1M tokens',
+    model: model?.model || '',
+    apiKey: model?.apiKey || '',
+    purposes: (model?.purposes || []) as AIModelPurpose[],
+    temperature: model?.temperature != null ? String(model.temperature) : '0.7',
+    maxTokens: model?.maxTokens != null ? String(model.maxTokens) : '2048',
+    enabled: model?.enabled ?? true,
   });
+  const [showKey, setShowKey] = useState(false);
 
-  const toggleTask = (tid: string) =>
-    setForm((f) => ({ ...f, tasks: f.tasks.includes(tid) ? f.tasks.filter((t) => t !== tid) : [...f.tasks, tid] }));
+  const toggleTask = (tid: AIModelPurpose) =>
+    setForm((f) => ({ ...f, purposes: f.purposes.includes(tid) ? f.purposes.filter((t) => t !== tid) : [...f.purposes, tid] }));
 
   const handleSave = () => {
-    if (!form.name.trim() || !form.provider.trim()) return;
-    const m: Model = {
-      id: model?.id || `custom-${Date.now()}`,
-      provider: form.provider,
-      name: form.name,
-      baseUrl: form.baseUrl,
-      apiKeyRef: form.apiKeyRef,
-      tasks: form.tasks,
-      enabled: model?.enabled ?? true,
-      inPrice: parseFloat(form.inPrice) || 0,
-      outPrice: parseFloat(form.outPrice) || 0,
-      unit: form.unit,
-      custom: true,
-    };
-    onSave(m);
+    if (!form.name.trim() || !form.model.trim()) return;
+    props.onSave({
+      id: model?.id || `custom-${Date.now().toString(36)}`,
+      name: form.name.trim(),
+      provider: form.provider || 'custom',
+      baseUrl: form.baseUrl.trim(),
+      apiKey: form.apiKey,
+      model: form.model.trim(),
+      enabled: form.enabled,
+      purposes: form.purposes.length ? form.purposes : ['generic'],
+      temperature: parseFloat(form.temperature) || 0.7,
+      maxTokens: parseInt(form.maxTokens, 10) || 2048,
+    });
   };
 
   const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '7px 10px', background: '#F5F6F8', border: '1px solid #E4E7EE',
-    borderRadius: 5, fontSize: 12, color: '#1A1D24', outline: 'none',
-    fontFamily: "'Inter', sans-serif", boxSizing: 'border-box',
+    width: '100%',
+    padding: '7px 10px',
+    background: '#F5F6F8',
+    border: '1px solid #E4E7EE',
+    borderRadius: 5,
+    fontSize: 12,
+    color: '#1A1D24',
+    outline: 'none',
+    fontFamily: "'Inter', sans-serif",
+    boxSizing: 'border-box',
   };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,12,18,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-      <div style={{ width: 520, background: C.white, borderRadius: 10, boxShadow: '0 8px 40px rgba(0,0,0,0.16)', overflow: 'hidden' }}>
+      <div style={{ width: 560, background: C.white, borderRadius: 10, boxShadow: '0 8px 40px rgba(0,0,0,0.16)', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: `1px solid ${C.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: C.text, fontFamily: "'Outfit', sans-serif" }}>{isEdit ? '编辑模型' : '添加自定义模型'}</span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.textMute, fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>×</button>
+          <span style={{ fontSize: 14, fontWeight: 600, color: C.text, fontFamily: "'Outfit', sans-serif" }}>{isEdit ? '编辑模型' : '添加模型'}</span>
+          <button onClick={props.onClose} style={{ background: 'none', border: 'none', color: C.textMute, fontSize: 18, cursor: 'pointer', lineHeight: 1 }}>×</button>
         </div>
         <div style={{ padding: '18px 20px', maxHeight: '70vh', overflowY: 'auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-            <Field label="模型名称 *" required><input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. GPT-4o" style={inputStyle} /></Field>
-            <Field label="供应商 *" required><input value={form.provider} onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value }))} placeholder="e.g. OpenAI" style={inputStyle} /></Field>
+            <Field label="模型名称 *" required>
+              <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. DeepSeek Chat" style={inputStyle} />
+            </Field>
+            <Field label="供应商标识">
+              <input value={form.provider} onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value }))} placeholder="e.g. deepseek / openai / custom" style={inputStyle} />
+            </Field>
           </div>
           <Field label="API Base URL" style={{ marginBottom: 12 }}>
             <input value={form.baseUrl} onChange={(e) => setForm((f) => ({ ...f, baseUrl: e.target.value }))} placeholder="https://api.example.com/v1" style={inputStyle} />
+            <div style={{ fontSize: 10, color: C.textMute, marginTop: 4 }}>
+              请填写 OpenAI 兼容端点。DeepSeek 填 https://api.deepseek.com/v1，不要填 /anthropic 端点
+            </div>
           </Field>
-          <Field label="使用哪个 API Key" style={{ marginBottom: 16 }}>
-            <select value={form.apiKeyRef} onChange={(e) => setForm((f) => ({ ...f, apiKeyRef: e.target.value }))}
-              style={{ ...inputStyle, cursor: 'pointer' }}>
-              {[...API_KEY_DEFS, { id: 'custom', label: '自定义 Key (custom)', placeholder: '' }].map((k) => (
-                <option key={k.id} value={k.id}>{k.label}</option>
-              ))}
-            </select>
+          <Field label="模型名（model）*" style={{ marginBottom: 12 }}>
+            <input value={form.model} onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))} placeholder="e.g. deepseek-chat" style={inputStyle} />
           </Field>
-          <Field label="适用任务标签" style={{ marginBottom: 16 }}>
+          <Field label="API Key（仅保存在本地）" style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', gap: 5 }}>
+              <input
+                type={showKey ? 'text' : 'password'}
+                value={form.apiKey}
+                onChange={(e) => setForm((f) => ({ ...f, apiKey: e.target.value }))}
+                placeholder={isEdit && model?.apiKey ? '已配置，输入可替换' : 'sk-...'}
+                style={{ ...inputStyle, fontFamily: "'JetBrains Mono', monospace" }}
+              />
+              <button
+                onClick={() => setShowKey(!showKey)}
+                style={{ padding: '5px 10px', background: C.tag, border: `1px solid ${C.border}`, borderRadius: 4, color: C.textSub, fontSize: 11, cursor: 'pointer', flexShrink: 0 }}
+              >
+                {showKey ? '隐藏' : '显示'}
+              </button>
+            </div>
+          </Field>
+          <Field label="适用用途" style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingTop: 4 }}>
               {ALL_TASKS.map((t) => {
-                const on = form.tasks.includes(t.id);
+                const on = form.purposes.includes(t.id as AIModelPurpose);
                 return (
-                  <button key={t.id} onClick={() => toggleTask(t.id)}
-                    style={{ padding: '5px 12px', background: on ? t.bg : C.bg, border: `1.5px solid ${on ? t.bdr : C.border}`, borderRadius: 20, fontSize: 11, color: on ? t.color : C.textSub, cursor: 'pointer', fontWeight: on ? 600 : 400 }}>
+                  <button
+                    key={t.id}
+                    onClick={() => toggleTask(t.id as AIModelPurpose)}
+                    style={{
+                      padding: '5px 12px',
+                      background: on ? t.bg : C.bg,
+                      border: `1.5px solid ${on ? t.bdr : C.border}`,
+                      borderRadius: 20,
+                      fontSize: 11,
+                      color: on ? t.color : C.textSub,
+                      cursor: 'pointer',
+                      fontWeight: on ? 600 : 400,
+                    }}
+                  >
                     {t.label}
                   </button>
                 );
               })}
             </div>
           </Field>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 4 }}>
-            <Field label="输入价格"><input type="number" value={form.inPrice} onChange={(e) => setForm((f) => ({ ...f, inPrice: e.target.value }))} placeholder="0.00" style={inputStyle} /></Field>
-            <Field label="输出价格"><input type="number" value={form.outPrice} onChange={(e) => setForm((f) => ({ ...f, outPrice: e.target.value }))} placeholder="0.00" style={inputStyle} /></Field>
-            <Field label="计费单位">
-              <select value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} style={{ ...inputStyle, cursor: 'pointer' }}>
-                {['$/1M tokens', '\u00a5/1K tokens', '$/image', '$/second', '$/1K chars', '\u00a5/second'].map((u) => (<option key={u}>{u}</option>))}
-              </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 4 }}>
+            <Field label="Temperature">
+              <input type="number" step="0.1" min="0" max="2" value={form.temperature} onChange={(e) => setForm((f) => ({ ...f, temperature: e.target.value }))} style={inputStyle} />
             </Field>
+            <Field label="Max Tokens">
+              <input type="number" min="1" value={form.maxTokens} onChange={(e) => setForm((f) => ({ ...f, maxTokens: e.target.value }))} style={inputStyle} />
+            </Field>
+          </div>
+          <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Toggle on={form.enabled} onClick={() => setForm((f) => ({ ...f, enabled: !f.enabled }))} />
+            <span style={{ fontSize: 11, color: C.textSub }}>启用该模型</span>
           </div>
         </div>
         <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}`, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button onClick={onClose} style={{ padding: '7px 16px', background: C.tag, border: `1px solid ${C.border}`, borderRadius: 5, color: C.textSub, fontSize: 12, cursor: 'pointer' }}>取消</button>
-          <button onClick={handleSave} style={{ padding: '7px 20px', background: !form.name || !form.provider ? C.tag : C.amber, border: 'none', borderRadius: 5, color: !form.name || !form.provider ? C.textMute : '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: "'Outfit', sans-serif" }}>
+          <button onClick={props.onClose} style={{ padding: '7px 16px', background: C.tag, border: `1px solid ${C.border}`, borderRadius: 5, color: C.textSub, fontSize: 12, cursor: 'pointer' }}>取消</button>
+          <button
+            onClick={handleSave}
+            style={{
+              padding: '7px 20px',
+              background: !form.name || !form.model ? C.tag : C.amber,
+              border: 'none',
+              borderRadius: 5,
+              color: !form.name || !form.model ? C.textMute : '#fff',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: "'Outfit', sans-serif",
+            }}
+          >
             {isEdit ? '保存修改' : '添加模型'}
           </button>
         </div>
@@ -369,211 +597,57 @@ function ModelModal({ model, onSave, onClose }: { model: Model | null; onSave: (
   );
 }
 
-function TokensTab() {
-  const COLORS = { script: C.blue, storyboard: '#7C3AED', dubbing: C.red, video: C.green } as const;
-  const LABELS = { script: '剧本', storyboard: '分镜', dubbing: '配音', video: '视频' };
-  const maxVal = Math.max(...DAILY.map((d) => d.script + d.storyboard + d.dubbing + d.video));
-
-  const totalByType = {
-    script: DAILY.reduce((s, d) => s + d.script, 0),
-    storyboard: DAILY.reduce((s, d) => s + d.storyboard, 0),
-    dubbing: DAILY.reduce((s, d) => s + d.dubbing, 0),
-    video: DAILY.reduce((s, d) => s + d.video, 0),
-  };
-  const grand = Object.values(totalByType).reduce((s, v) => s + v, 0);
-
+function DefaultsTab(props: { settings: AIModelSettings; onSetDefault: (purpose: AIModelPurpose, modelId: string) => void }) {
+  const purposes = Object.keys(PURPOSE_LABELS) as AIModelPurpose[];
   return (
-    <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
-        {(Object.entries(totalByType) as [keyof typeof totalByType, number][]).map(([type, val]) => (
-          <div key={type} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 6, padding: '12px 14px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-              <span style={{ fontSize: 11, color: C.textSub }}>{LABELS[type]}</span>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: COLORS[type], marginTop: 2 }} />
-            </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono', monospace" }}>{fmtK(val)}</div>
-            <div style={{ fontSize: 9, color: C.textMute, marginTop: 2 }}>tokens · {Math.round((val / grand) * 100)}%</div>
-          </div>
-        ))}
+    <div style={{ maxWidth: 720 }}>
+      <div style={{ fontSize: 11, color: C.textMute, marginBottom: 14 }}>
+        每个用途选择默认使用的模型。未配置时自动选择「启用且支持该用途」的第一个模型。
       </div>
-      <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 6, padding: '18px 20px', marginBottom: 20 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFamily: "'Outfit', sans-serif" }}>14天用量趋势</div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            {(Object.entries(LABELS) as [string, string][]).map(([type, label]) => (
-              <div key={type} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <div style={{ width: 8, height: 3, background: COLORS[type as keyof typeof COLORS], borderRadius: 2 }} />
-                <span style={{ fontSize: 10, color: C.textSub }}>{label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 5, alignItems: 'flex-end', height: 110 }}>
-          {DAILY.map((d) => {
-            const total = d.script + d.storyboard + d.dubbing + d.video;
-            const h = (total / maxVal) * 100;
-            return (
-              <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                <div style={{ width: '100%', height: h, display: 'flex', flexDirection: 'column-reverse', borderRadius: '2px 2px 0 0', overflow: 'hidden' }}>
-                  {(['script', 'storyboard', 'dubbing', 'video'] as const).map((type) => {
-                    const frac = total > 0 ? d[type] / total : 0;
-                    return frac > 0 ? <div key={type} style={{ width: '100%', height: `${frac * 100}%`, background: COLORS[type], minHeight: 2 }} /> : null;
-                  })}
-                </div>
-                <span style={{ fontSize: 8, color: C.textMute, fontFamily: "'JetBrains Mono', monospace" }}>{d.date}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 6, padding: '18px 20px' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 14, fontFamily: "'Outfit', sans-serif" }}>模型用量明细（本月）</div>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: `2px solid ${C.border}` }}>
-              {['模型', '供应商', '输入', '输出', '调用次数', '费用'].map((h) => (
-                <th key={h} style={{ textAlign: 'left', padding: '0 0 8px', fontSize: 10, color: C.textMute, fontWeight: 500, fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.04em' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {[
-              { name: 'GPT-4o', prov: 'OpenAI', inTok: 68400, outTok: 24200, calls: 142, cost: 1.30 },
-              { name: 'Claude 3.5 Sonnet', prov: 'Anthropic', inTok: 142800, outTok: 38600, calls: 287, cost: 1.01 },
-              { name: 'Qwen-Max', prov: '阿里云', inTok: 312000, outTok: 98400, calls: 512, cost: 0.24 },
-              { name: 'SDXL Turbo', prov: 'Stability', inTok: 0, outTok: 0, calls: 184, cost: 0.37 },
-              { name: 'Multilingual v2', prov: 'ElevenLabs', inTok: 0, outTok: 0, calls: 891, cost: 2.67 },
-            ].map((r, i, arr) => (
-              <tr key={r.name} style={{ borderBottom: i < arr.length - 1 ? `1px solid ${C.bg}` : 'none' }}>
-                <td style={{ padding: '8px 0', fontSize: 11, color: C.text, fontWeight: 500 }}>{r.name}</td>
-                <td style={{ padding: '8px 0', fontSize: 10, color: C.textSub }}>{r.prov}</td>
-                <td style={{ padding: '8px 0', fontSize: 11, color: C.textSub, fontFamily: "'JetBrains Mono', monospace" }}>{r.inTok > 0 ? fmtK(r.inTok) : '\u2014'}</td>
-                <td style={{ padding: '8px 0', fontSize: 11, color: C.textSub, fontFamily: "'JetBrains Mono', monospace" }}>{r.outTok > 0 ? fmtK(r.outTok) : '\u2014'}</td>
-                <td style={{ padding: '8px 0', fontSize: 11, color: C.textSub, fontFamily: "'JetBrains Mono', monospace" }}>{r.calls}</td>
-                <td style={{ padding: '8px 0', fontSize: 12, color: C.amber, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>\u00a5{r.cost.toFixed(2)}</td>
-              </tr>
-            ))}
-            <tr style={{ borderTop: `2px solid ${C.border}` }}>
-              <td colSpan={5} style={{ padding: '10px 0', fontSize: 11, color: C.textSub, fontWeight: 600 }}>合计</td>
-              <td style={{ padding: '10px 0', fontSize: 14, color: C.amber, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>\u00a55.59</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function BillingTab({ budget, setBudget }: { budget: string; setBudget: (v: string) => void }) {
-  const used = 5.59;
-  const limit = parseFloat(budget) || 500;
-  const pct = Math.min(100, (used / limit) * 100);
-
-  const UNIT_COSTS = { script: 0.000488, storyboard: 0.000540, image: 0.002, dubbing: 0.003, video: 0.050 };
-  const [scenes, setScenes] = useState(24);
-  const [shots, setShots] = useState(6);
-  const [lines, setLines] = useState(40);
-  const [videoDur, setVideoDur] = useState(18);
-
-  const estimate = scenes * UNIT_COSTS.script + scenes * shots * (UNIT_COSTS.storyboard + UNIT_COSTS.image) + lines * UNIT_COSTS.dubbing + videoDur * 60 * UNIT_COSTS.video;
-
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24 }}>
-      <div>
-        <SectionTitle>本月费用总览</SectionTitle>
-        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 6, padding: '18px 20px', marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 14 }}>
-            <div>
-              <div style={{ fontSize: 30, fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono', monospace", lineHeight: 1 }}>\u00a5{used.toFixed(2)}</div>
-              <div style={{ fontSize: 11, color: C.textMute, marginTop: 4 }}>截止今日 · 8月份</div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 11, color: C.textSub, marginBottom: 4 }}>月度预算</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <span style={{ fontSize: 13, color: C.textMute }}>\u00a5</span>
-                <input value={budget} onChange={(e) => setBudget(e.target.value)}
-                  style={{ width: 72, padding: '5px 8px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, fontSize: 14, color: C.text, outline: 'none', fontFamily: "'JetBrains Mono', monospace", textAlign: 'right', fontWeight: 700 }} />
-              </div>
-            </div>
-          </div>
-          <div style={{ height: 8, background: C.tag, borderRadius: 4, marginBottom: 6 }}>
-            <div style={{ height: '100%', width: `${pct}%`, background: pct > 80 ? C.red : C.amber, borderRadius: 4 }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: C.textMute }}>
-            <span>已用 {pct.toFixed(1)}%</span>
-            <span>剩余 \u00a5{(limit - used).toFixed(2)}</span>
-          </div>
-        </div>
-
-        <SectionTitle>项目费用</SectionTitle>
-        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 6, overflow: 'hidden', marginBottom: 16 }}>
-          {[
-            { name: '都市迷情·第三季', cost: 2.14, tokens: 142800, pct: 38 },
-            { name: '重生之巅峰时代', cost: 1.42, tokens: 89200, pct: 26 },
-            { name: '霸总的秘密花园', cost: 1.79, tokens: 234600, pct: 32 },
-            { name: '穿越之绝代风华', cost: 0.24, tokens: 12400, pct: 4 },
-          ].map((p, i, arr) => (
-            <div key={p.name} style={{ padding: '11px 16px', borderBottom: i < arr.length - 1 ? `1px solid ${C.bg}` : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 6, overflow: 'hidden' }}>
+        {purposes.map((purpose, i, arr) => {
+          const candidates = props.settings.models.filter((m) => m.enabled && m.purposes.includes(purpose));
+          const current = props.settings.defaults[purpose] ?? '';
+          return (
+            <div
+              key={purpose}
+              style={{
+                padding: '11px 16px',
+                borderBottom: i < arr.length - 1 ? `1px solid ${C.bg}` : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+              }}
+            >
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: C.text, fontWeight: 500, marginBottom: 5 }}>{p.name}</div>
-                <div style={{ height: 3, background: C.tag, borderRadius: 2 }}>
-                  <div style={{ height: '100%', width: `${p.pct}%`, background: C.amber, borderRadius: 2 }} />
-                </div>
+                <div style={{ fontSize: 12, color: C.text, fontWeight: 500 }}>{PURPOSE_LABELS[purpose]}</div>
+                <div style={{ fontSize: 10, color: C.textMute, marginTop: 2 }}>{candidates.length ? `${candidates.length} 个可用模型` : '暂无启用且支持该用途的模型'}</div>
               </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 12, color: C.amber, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>\u00a5{p.cost.toFixed(2)}</div>
-                <div style={{ fontSize: 9, color: C.textMute }}>{fmtK(p.tokens)} tokens</div>
-              </div>
+              <select
+                value={current}
+                onChange={(e) => props.onSetDefault(purpose, e.target.value)}
+                style={{
+                  padding: '6px 10px',
+                  background: C.bg,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 5,
+                  fontSize: 11,
+                  color: C.text,
+                  outline: 'none',
+                  minWidth: 200,
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="">自动选择</option>
+                {candidates.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
             </div>
-          ))}
-        </div>
-
-        <div style={{ background: C.amberBg, border: `1px solid ${C.amberBdr}`, borderRadius: 6, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <div style={{ fontSize: 11, color: '#7A5500', fontWeight: 500 }}>预算预警</div>
-            <div style={{ fontSize: 10, color: '#9A7020', marginTop: 2 }}>超过预算 80% 时发送邮件通知</div>
-          </div>
-          <Toggle on={true} onClick={() => {}} />
-        </div>
-      </div>
-
-      <div>
-        <SectionTitle>成本估算器</SectionTitle>
-        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 6, padding: '16px 18px' }}>
-          <div style={{ fontSize: 11, color: C.textMute, marginBottom: 14 }}>拖动滑块预估项目生成成本</div>
-          {[
-            { label: '幕次数量', value: scenes, set: setScenes, unit: '幕', min: 1, max: 60 },
-            { label: '每幕平均镜头', value: shots, set: setShots, unit: '个', min: 1, max: 20 },
-            { label: '总台词数量', value: lines, set: setLines, unit: '条', min: 10, max: 200 },
-            { label: '成片总时长', value: videoDur, set: setVideoDur, unit: '分钟', min: 1, max: 60 },
-          ].map((item) => (
-            <div key={item.label} style={{ marginBottom: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-                <span style={{ fontSize: 11, color: C.textSub }}>{item.label}</span>
-                <span style={{ fontSize: 11, color: C.text, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500 }}>{item.value} {item.unit}</span>
-              </div>
-              <input type="range" min={item.min} max={item.max} value={item.value} onChange={(e) => item.set(Number(e.target.value))} style={{ width: '100%', accentColor: C.amber }} />
-            </div>
-          ))}
-          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, marginTop: 6 }}>
-            {[
-              { label: '剧本 + 润色', cost: scenes * UNIT_COSTS.script },
-              { label: '分镜描述', cost: scenes * shots * UNIT_COSTS.storyboard },
-              { label: '分镜图像', cost: scenes * shots * UNIT_COSTS.image },
-              { label: '角色配音', cost: lines * UNIT_COSTS.dubbing },
-              { label: '视频合成', cost: videoDur * 60 * UNIT_COSTS.video },
-            ].map((r) => (
-              <div key={r.label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, color: C.textSub }}>{r.label}</span>
-                <span style={{ fontSize: 11, color: C.textSub, fontFamily: "'JetBrains Mono', monospace" }}>\u00a5{r.cost.toFixed(2)}</span>
-              </div>
-            ))}
-            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>预估总费用</span>
-              <span style={{ fontSize: 22, color: C.amber, fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>\u00a5{estimate.toFixed(2)}</span>
-            </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -581,31 +655,25 @@ function BillingTab({ budget, setBudget }: { budget: string; setBudget: (v: stri
 
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
-    <div onClick={onClick} style={{ width: 34, height: 19, borderRadius: 10, background: on ? C.amber : '#D0D5E0', position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
+    <div
+      onClick={onClick}
+      style={{ width: 34, height: 19, borderRadius: 10, background: on ? C.amber : '#D0D5E0', position: 'relative', cursor: 'pointer', flexShrink: 0 }}
+    >
       <div style={{ position: 'absolute', top: 2.5, left: on ? 16 : 2.5, width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.18)' }} />
     </div>
   );
-}
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h3 style={{ margin: '0 0 12px', fontSize: 13, fontWeight: 600, color: '#1A1D24', fontFamily: "'Outfit', sans-serif" }}>{children}</h3>;
 }
 
 function Field({ label, children, style, required }: { label: string; children: React.ReactNode; style?: React.CSSProperties; required?: boolean }) {
   return (
     <div style={style}>
       <div style={{ fontSize: 10, color: C.textMute, fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>
-        {label}{required && <span style={{ color: C.red, marginLeft: 2 }}>*</span>}
+        {label}
+        {required && <span style={{ color: C.red, marginLeft: 2 }}>*</span>}
       </div>
       {children}
     </div>
   );
-}
-
-function fmtK(n: number) {
-  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
-  return String(n);
 }
 
 export default ApiConfig;

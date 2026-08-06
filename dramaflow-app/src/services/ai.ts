@@ -23,6 +23,7 @@ export interface AIGenerateShotsParams {
   scriptContent: string;
   scene: string;
   style?: string;
+  sceneCount?: number;
 }
 
 export interface AIDubbingParams {
@@ -44,6 +45,11 @@ export interface AIGenerateSuggestionParams {
   type: 'script' | 'character' | 'storyboard';
 }
 
+export interface AIGenerateImageParams {
+  prompt: string;
+  size?: string;
+}
+
 export interface AIService {
   name: string;
   generateScript(params: AIGenerateScriptParams): Promise<string>;
@@ -52,6 +58,8 @@ export interface AIService {
   generateCharacter(params: AIGenerateCharacterParams): Promise<string>;
   generateSuggestions(params: AIGenerateSuggestionParams): Promise<string[]>;
   polishScript(content: string, instruction?: string): Promise<string>;
+  /** 文生图：根据提示词生成图片，返回 dataURL（如 data:image/png;base64,...） */
+  generateImage(params: AIGenerateImageParams): Promise<string>;
 }
 
 export function createAIService(config: AIServiceConfig): AIService {
@@ -71,16 +79,16 @@ export function getAIServiceForPurpose(
     throw new Error(`没有可用的 AI 模型用于「${purpose}」，请在 AI 模型配置中启用至少一个支持该用途的模型。`);
   }
 
+  if (import.meta.env.DEV) {
+    console.log(`[DramaFlow AI] 用途「${purpose}」→ 模型「${model.name}」(${model.provider}${model.provider === 'mock' ? ' · 模拟模式，不会发起网络请求' : ''})`);
+  }
+
   if (model.provider === 'mock') {
     return createMockService();
   }
 
-  if (model.provider === 'openai') {
-    return createOpenAIService(model, purpose);
-  }
-
-  // custom 暂 fallback 到 mock
-  return createMockService();
+  // 所有非 mock 模型均走 OpenAI 兼容协议（openai / deepseek / dashscope / zhipu / custom）
+  return createOpenAIService(model, purpose);
 }
 
 // 兼容旧调用：默认返回通用/剧本用途的服务

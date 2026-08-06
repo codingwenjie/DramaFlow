@@ -101,7 +101,7 @@ export type AIModelPurpose =
 export interface AIModelConfig {
   id: string;
   name: string;
-  provider: 'openai' | 'anthropic' | 'custom' | 'mock';
+  provider: string;
   baseUrl: string;
   apiKey: string;
   model: string;

@@ -1,10 +1,22 @@
-import { app, BrowserWindow, Menu, dialog } from 'electron'
+import { app, BrowserWindow, Menu, dialog, ipcMain, net, protocol } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import path from 'path'
+import fs from 'fs'
+import { pathToFileURL } from 'url'
+import { runSynthesis } from './synthesis'
+import type { SynthesisJobInput, SynthesisProgress, SynthesisResult } from './synthesis'
 
 const isDev = !app.isPackaged
 
 let mainWindow: BrowserWindow | null = null
+
+// 本地成片预览协议：dramaflow-media://local/?path=<encodeURIComponent(绝对路径)>
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'dramaflow-media',
+    privileges: { secure: true, supportFetchAPI: true, stream: true },
+  },
+])
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -173,6 +185,35 @@ if (!isDev) {
 }
 
 app.whenReady().then(() => {
+  protocol.handle('dramaflow-media', (request) => {
+    const url = new URL(request.url)
+    const filePath = url.searchParams.get('path')
+    if (!filePath) {
+      return new Response('Bad Request', { status: 400 })
+    }
+    return net.fetch(pathToFileURL(filePath).toString())
+  })
+
+  ipcMain.handle('synthesis:start', async (event, job: SynthesisJobInput): Promise<SynthesisResult> => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const sendProgress = (p: SynthesisProgress) => win?.webContents.send('synthesis:progress', p)
+    const outputDir = path.join(app.getPath('userData'), 'exports')
+    return runSynthesis(job, sendProgress, outputDir)
+  })
+
+  ipcMain.handle('synthesis:save-as', async (event, payload: { sourcePath: string; defaultName: string }) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const options: Electron.SaveDialogOptions = {
+      title: '保存成片',
+      defaultPath: payload.defaultName,
+      filters: [{ name: 'MP4 视频', extensions: ['mp4'] }],
+    }
+    const { canceled, filePath } = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options)
+    if (canceled || !filePath) return null
+    fs.copyFileSync(payload.sourcePath, filePath)
+    return filePath
+  })
+
   createAppMenu()
   createWindow()
   // 应用启动后 5 秒检查更新

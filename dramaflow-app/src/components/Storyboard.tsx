@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { C } from '../constants';
 import { Button, Tag } from './common';
 import { useAppStore } from '../store/useAppStore';
-import { loadModuleData, saveModuleData } from '../data/storage';
-import { Shot } from '../data/types';
+import { useProjectStore } from '../store/useProjectStore';
+import { loadModuleData, saveModuleData, saveProjectFile, loadProjectFile } from '../data/storage';
+import { Episode, Shot } from '../data/types';
 import { getAIServiceForPurpose } from '../services';
+import { parseShotsToShots, parseShotLines } from '../services/shot-parser';
 
 const DEFAULT_SHOTS: Shot[] = [
   {
@@ -54,15 +56,120 @@ const STATUS_COLOR: Record<string, { bg: string; text: string }> = {
 };
 
 type ViewMode = 'grid' | 'list';
+const PAGE_SIZE = 12;
+
+/** 分镜缩略图：从 IndexedDB 加载图片（db:// 引用）或直接显示 dataURL/URL */
+const ShotThumbnail: React.FC<{ shot: Shot }> = ({ shot }) => {
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    setImgUrl(null);
+    if (!shot.img) return;
+    if (shot.img.startsWith('db://')) {
+      setLoading(true);
+      loadProjectFile(shot.projectId, shot.img.slice(5))
+        .then((blob) => {
+          if (alive && blob) setImgUrl(URL.createObjectURL(blob));
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (alive) setLoading(false);
+        });
+    } else {
+      setImgUrl(shot.img);
+    }
+    return () => {
+      alive = false;
+    };
+  }, [shot.img, shot.projectId]);
+
+  if (imgUrl) {
+    return (
+      <img
+        src={imgUrl}
+        alt={shot.desc}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          position: 'absolute',
+          inset: 0,
+          borderRadius: 'inherit',
+        }}
+      />
+    );
+  }
+  if (loading) {
+    return <div style={{ fontSize: 10, color: C.textMute }}>图片生成中…</div>;
+  }
+  return null;
+};
+
+/** 后台批量生成分镜图（并发 2），不阻塞描述生成主流程 */
+async function generateImagesInBackground(
+  projectId: string,
+  shots: Shot[],
+  onImage: (shotId: string, img: string) => void
+): Promise<void> {
+  const limit = 2;
+  let index = 0;
+  async function worker(): Promise<void> {
+    while (index < shots.length) {
+      const i = index++;
+      const shot = shots[i];
+      try {
+        const service = getAIServiceForPurpose('image');
+        const dataUrl = await service.generateImage({ prompt: shot.desc, size: '512x512' });
+        const blob = await (await fetch(dataUrl)).blob();
+        await saveProjectFile(projectId, shot.id, blob);
+        onImage(shot.id, `db://${shot.id}`);
+      } catch {
+        // 无图像模型或生成失败：跳过，不影响分镜描述
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, shots.length) }, () => worker()));
+}
 
 const Storyboard: React.FC = () => {
   const activeProjectId = useAppStore((s) => s.activeProjectId);
+  const { projects, updateProject } = useProjectStore();
+  const project = projects.find((p) => p.id === activeProjectId);
   const [shots, setShots] = useState<Shot[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
   const [editDescriptions, setEditDescriptions] = useState<Record<string, string>>({});
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [aiGeneratingAll, setAiGeneratingAll] = useState(false);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [lastGenerateMessage, setLastGenerateMessage] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sentinelRef = React.useRef<HTMLDivElement | null>(null);
+
+  // 已写好剧本的幕数（联动分镜生成的可用素材）
+  const scriptReadyCount = episodes.filter((e) => e.content.trim()).length;
+  const visibleShots = shots.slice(0, visibleCount);
+  const hasMore = visibleCount < shots.length;
+
+  // 底部哨兵：内容不满一屏时自动继续加载，滚动到底时触发下一页
+  useEffect(() => {
+    if (!hasMore) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount((c) => Math.min(shots.length, c + PAGE_SIZE));
+        }
+      },
+      { rootMargin: '0px 0px 160px 0px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, shots.length, viewMode]);
 
   const handleGenerateShot = async (shotId: string) => {
     const shot = shots.find((s) => s.id === shotId);
@@ -75,7 +182,8 @@ const Storyboard: React.FC = () => {
         scene: `场景 ${shot.scene}`,
         style: `${shot.type} / ${shot.angle}`,
       });
-      const newDesc = result[0] || shot.desc;
+      const parsed = parseShotLines(result.join('\n'));
+      const newDesc = parsed[0]?.desc || result[0] || shot.desc;
       setShots((prev) =>
         prev.map((s) => (s.id === shotId ? { ...s, desc: newDesc, status: 'done' } : s))
       );
@@ -87,10 +195,130 @@ const Storyboard: React.FC = () => {
     }
   };
 
+  /** AI 生成全部：逐幕读取剧本内容批量生成镜头，替换该幕现有镜头 */
+  const handleGenerateAll = async () => {
+    if (aiGeneratingAll) return;
+    setAiGeneratingAll(true);
+    setLastGenerateMessage(null);
+    try {
+      const grouped = new Map<number, Shot[]>();
+      for (const s of shots) {
+        if (!grouped.has(s.scene)) grouped.set(s.scene, []);
+        grouped.get(s.scene)!.push(s);
+      }
+      // 场景列表从剧本（有内容的幕）推导，新项目没有镜头也能批量生成
+      const scenes = episodes
+        .filter((e) => e.content.trim())
+        .map((e) => e.sceneNumber)
+        .sort((a, b) => a - b);
+      const skipped: number[] = [];
+      let generated = 0;
+      for (const scene of scenes) {
+        const sceneShots = grouped.get(scene) || [];
+        const episode = episodes.find((e) => e.sceneNumber === scene);
+        // 剧本为空则跳过，避免用旧镜头描述硬生成
+        if (!episode?.content?.trim()) {
+          skipped.push(scene);
+          continue;
+        }
+        // 标记整幕生成中
+        setShots((prev) => prev.map((s) => (s.scene === scene ? { ...s, status: 'generating' as const } : s)));
+        const words = episode.content.replace(/\s/g, '').length;
+        const targetCount = Math.max(3, Math.min(12, Math.round(words / 70)));
+        try {
+          const service = getAIServiceForPurpose('storyboard');
+          const result = await service.generateShots({
+            scriptContent: episode.content,
+            scene: `第${scene}幕`,
+            sceneCount: targetCount,
+          });
+          const parsed = parseShotsToShots(result.join('\n'), activeProjectId || '', scene);
+          if (parsed.length > 0) {
+            generated += 1;
+            setShots((prev) => {
+              const sceneIds = new Set(sceneShots.map((s) => s.id));
+              return [...prev.filter((s) => !sceneIds.has(s.id)), ...parsed];
+            });
+            // 后台生成分镜图（真实文生图或模拟占位图），完成后逐个回填
+            void generateImagesInBackground(activeProjectId || '', parsed, (shotId, img) => {
+              setShots((prev) => prev.map((s) => (s.id === shotId ? { ...s, img } : s)));
+            });
+          } else {
+            setShots((prev) => prev.map((s) => (s.scene === scene ? { ...s, status: 'pending' as const } : s)));
+          }
+        } catch (error) {
+          console.error('分镜批量生成失败:', error);
+          alert(error instanceof Error ? error.message : '分镜生成失败');
+          setShots((prev) => prev.map((s) => (s.scene === scene ? { ...s, status: 'pending' as const } : s)));
+        }
+      }
+      // 回写项目进度（剧本已 100 时，分镜按生成幕数占比）
+      if (activeProjectId && project && generated > 0) {
+        const totalWithScript = scenes.length - skipped.length;
+        const storyboardPct = totalWithScript > 0 ? Math.round((generated / totalWithScript) * 100) : 0;
+        updateProject(activeProjectId, {
+          progress: {
+            script: project.progress?.script ?? 0,
+            storyboard: storyboardPct,
+            characters: project.progress?.characters ?? 0,
+            dubbing: project.progress?.dubbing ?? 0,
+            synthesis: project.progress?.synthesis ?? 0,
+          },
+        });
+      }
+      const msgParts: string[] = [];
+      if (generated > 0) msgParts.push(`已生成 ${generated} 幕分镜`);
+      if (skipped.length > 0) msgParts.push(`第 ${skipped.join('、')} 幕剧本为空，已跳过`);
+      if (msgParts.length) setLastGenerateMessage(msgParts.join('；'));
+      setVisibleCount(PAGE_SIZE);
+    } finally {
+      setAiGeneratingAll(false);
+    }
+  };
+
+  /** 滚动到底部自动加载下一页 */
+  const handleScrollLoad = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (import.meta.env.DEV) {
+      console.log('[分页调试] 滚动触发', {
+        scrollTop: Math.round(el.scrollTop),
+        clientHeight: el.clientHeight,
+        scrollHeight: el.scrollHeight,
+        visibleCount,
+        total: shots.length,
+      });
+    }
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 120) {
+      setVisibleCount((c) => Math.min(shots.length, c + PAGE_SIZE));
+    }
+  };
+
+  const renderLoadStatus = () => (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '10px 16px',
+        borderTop: `1px solid ${C.border}`,
+        background: C.sidebar,
+        flexShrink: 0,
+      }}
+    >
+      <span style={{ fontSize: 11, color: C.textMute }}>
+        {hasMore
+          ? `已加载 ${visibleShots.length} / ${shots.length} 个镜头，滚动到底部加载更多`
+          : `已全部加载（${shots.length} 个镜头）`}
+      </span>
+    </div>
+  );
+
   useEffect(() => {
     if (!activeProjectId) return;
     const data = loadModuleData<Shot[]>(activeProjectId, 'shots', DEFAULT_SHOTS);
+    const epData = loadModuleData<Episode[]>(activeProjectId, 'episodes', []);
     setShots(data);
+    setEpisodes(epData);
     setLoaded(true);
   }, [activeProjectId]);
 
@@ -192,7 +420,9 @@ const Storyboard: React.FC = () => {
             }}
           />
         )}
-        {shot.status === 'done' && (
+        {shot.status === 'done' && shot.img ? (
+          <ShotThumbnail shot={shot} />
+        ) : shot.status === 'done' ? (
           <div
             style={{
               width: isList ? 20 : 28,
@@ -214,7 +444,7 @@ const Storyboard: React.FC = () => {
               />
             </svg>
           </div>
-        )}
+        ) : null}
         {shot.status === 'pending' && !isList && (
           <div
             style={{
@@ -254,16 +484,31 @@ const Storyboard: React.FC = () => {
   const renderGridView = () => (
     <div
       style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
-        gap: 12,
-        padding: 16,
-        overflow: 'auto',
         flex: 1,
-        alignContent: 'start',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        minHeight: 0,
       }}
     >
-      {shots.map((shot) => {
+      <div
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          padding: 16,
+          minHeight: 0,
+        }}
+        onScroll={handleScrollLoad}
+      >
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+            gap: 12,
+            alignContent: 'start',
+          }}
+        >
+      {visibleShots.map((shot) => {
         const isSelected = selectedShotId === shot.id;
         return (
           <div
@@ -302,6 +547,7 @@ const Storyboard: React.FC = () => {
                 {renderStatusLabel(shot.status)}
               </div>
               <div style={{ display: 'flex', gap: 4, marginBottom: 6, flexWrap: 'wrap' }}>
+                <Tag>第 {shot.scene} 幕</Tag>
                 <Tag>{shot.type}</Tag>
                 <Tag>{shot.angle}</Tag>
               </div>
@@ -354,21 +600,36 @@ const Storyboard: React.FC = () => {
           </div>
         );
       })}
+        </div>
+        <div ref={hasMore ? sentinelRef : undefined} style={{ height: 1 }} />
+      </div>
+      {renderLoadStatus()}
     </div>
   );
 
   const renderListView = () => (
     <div
       style={{
+        flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        gap: 1,
-        padding: 16,
-        overflow: 'auto',
-        flex: 1,
+        overflow: 'hidden',
+        minHeight: 0,
       }}
     >
-      {shots.map((shot) => {
+      <div
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          padding: 16,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1,
+          minHeight: 0,
+        }}
+        onScroll={handleScrollLoad}
+      >
+      {visibleShots.map((shot) => {
         const isSelected = selectedShotId === shot.id;
         return (
           <div
@@ -398,6 +659,18 @@ const Storyboard: React.FC = () => {
                   }}
                 >
                   {shot.id}
+                </span>
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: C.amber,
+                    background: C.amberLight,
+                    padding: '1px 6px',
+                    borderRadius: 3,
+                    fontWeight: 500,
+                  }}
+                >
+                  第 {shot.scene} 幕
                 </span>
                 <span
                   style={{
@@ -453,6 +726,9 @@ const Storyboard: React.FC = () => {
           </div>
         );
       })}
+      <div ref={hasMore ? sentinelRef : undefined} style={{ height: 1 }} />
+      </div>
+      {renderLoadStatus()}
     </div>
   );
 
@@ -687,6 +963,7 @@ const Storyboard: React.FC = () => {
         flexDirection: 'column',
         overflow: 'hidden',
         background: C.bg,
+        height: '100%',
       }}
     >
       <style>{`
@@ -695,6 +972,33 @@ const Storyboard: React.FC = () => {
           to { transform: rotate(360deg); }
         }
       `}</style>
+
+      {/* 剧本联动信息条 */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '8px 16px',
+          borderBottom: `1px solid ${C.border}`,
+          background: C.sidebar,
+          flexShrink: 0,
+          flexWrap: 'wrap',
+        }}
+      >
+        <span style={{ fontSize: 12, color: C.textSub, fontWeight: 500 }}>📜 剧本联动</span>
+        <span style={{ fontSize: 11, color: scriptReadyCount > 0 ? C.green : C.textMute }}>
+          {episodes.length} 幕中 {scriptReadyCount} 幕已写好剧本
+        </span>
+        {scriptReadyCount < episodes.length && (
+          <span style={{ fontSize: 11, color: C.amber }}>
+            还有 {episodes.length - scriptReadyCount} 幕未写，生成时自动跳过
+          </span>
+        )}
+        {lastGenerateMessage && (
+          <span style={{ fontSize: 11, color: C.blue, marginLeft: 'auto' }}>{lastGenerateMessage}</span>
+        )}
+      </div>
 
       {/* Top bar */}
       <div
@@ -767,13 +1071,19 @@ const Storyboard: React.FC = () => {
             </button>
           </div>
 
-          <Button variant="primary">AI 生成全部</Button>
+          <Button
+            variant="primary"
+            onClick={handleGenerateAll}
+            disabled={aiGeneratingAll || scriptReadyCount === 0}
+          >
+            {aiGeneratingAll ? '生成中…' : 'AI 生成全部'}
+          </Button>
         </div>
       </div>
 
       {/* Main content */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
           {viewMode === 'grid' ? renderGridView() : renderListView()}
         </div>
         {renderDetailPanel()}

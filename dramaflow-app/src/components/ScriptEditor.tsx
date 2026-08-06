@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { C } from '../constants';
 import { useAppStore } from '../store/useAppStore';
+import { useProjectStore } from '../store/useProjectStore';
 import { loadModuleData, saveModuleData, generateModuleId } from '../data/storage';
 import { Episode } from '../data/types';
 import { getAIServiceForPurpose } from '../services';
+import { parseScriptToEpisodes, countWords } from '../services/script-parser';
+import { normalizeScript, extractCharacters } from '../services/script-format';
 
 const colors = {
   ...C,
   amberBg: '#FFF3D0',
   blueBg: '#EFF4FF',
   input: '#F5F6F8',
+  redBg: '#FEF2F2',
+  red: '#DC2626',
 };
 
 interface Suggestion {
@@ -85,6 +90,7 @@ const QUICK_ACTIONS = ['续写下一幕', '优化对白节奏', '增加冲突张
 
 const ScriptEditor: React.FC = () => {
   const activeProjectId = useAppStore((s) => s.activeProjectId);
+  const project = useProjectStore((s) => s.projects.find((p) => p.id === activeProjectId));
 
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [scriptContent, setScriptContent] = useState('');
@@ -92,6 +98,8 @@ const ScriptEditor: React.FC = () => {
   const [selectedSceneId, setSelectedSceneId] = useState<string>('s1');
   const [aiGenerating, setAiGenerating] = useState<boolean>(false);
   const [aiInput, setAiInput] = useState<string>('');
+  const [hoveredSceneId, setHoveredSceneId] = useState<string | null>(null);
+  const [newCharacterInput, setNewCharacterInput] = useState('');
 
   // 当 projectId 变化时重新加载数据
   useEffect(() => {
@@ -106,10 +114,97 @@ const ScriptEditor: React.FC = () => {
   // 自动保存
   useEffect(() => {
     if (!activeProjectId || !loaded) return;
-    saveModuleData(activeProjectId, 'episodes', episodes);
+    saveModuleData(
+      activeProjectId,
+      'episodes',
+      episodes.map((e) => ({ ...e, words: countWords(e.content) }))
+    );
   }, [episodes, activeProjectId, loaded]);
 
+  // 编辑器内容同步回当前幕（修复切换幕次/刷新丢内容的问题）
+  useEffect(() => {
+    if (!loaded || !selectedSceneId) return;
+    setEpisodes((prev) =>
+      prev.map((s) => (s.id === selectedSceneId ? { ...s, content: scriptContent } : s))
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scriptContent]);
+
   const selectedScene = episodes.find((s) => s.id === selectedSceneId) || episodes[0];
+
+  const handleSelectScene = (scene: Episode) => {
+    setSelectedSceneId(scene.id);
+    setScriptContent(scene.content);
+  };
+
+  /** 更新当前幕的属性（标题/类型/地点/时间/角色等） */
+  const handleUpdateScene = (updates: Partial<Episode>) => {
+    if (!selectedSceneId) return;
+    setEpisodes((prev) => prev.map((s) => (s.id === selectedSceneId ? { ...s, ...updates } : s)));
+  };
+
+  /** 删除幕次（至少保留一幕） */
+  const handleDeleteScene = (id: string) => {
+    if (episodes.length <= 1) {
+      alert('至少需要保留一个幕次');
+      return;
+    }
+    if (!window.confirm('确定删除该幕次？正文将一并删除，无法恢复。')) return;
+    const index = episodes.findIndex((s) => s.id === id);
+    const next = episodes.filter((s) => s.id !== id);
+    setEpisodes(next);
+    const nextSelected = next[Math.min(index, next.length - 1)];
+    setSelectedSceneId(nextSelected.id);
+    setScriptContent(nextSelected.content);
+  };
+
+  /** 移动幕次并重排编号 */
+  const handleMoveScene = (id: string, dir: -1 | 1) => {
+    const index = episodes.findIndex((s) => s.id === id);
+    const target = index + dir;
+    if (index < 0 || target < 0 || target >= episodes.length) return;
+    const reordered = [...episodes];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    const renumbered = reordered.map((s, i) => ({ ...s, sceneNumber: i + 1, title: `第${i + 1}幕` }));
+    setEpisodes(renumbered);
+  };
+
+  /** 本地格式化当前幕正文 */
+  const handleFormat = () => {
+    if (!scriptContent.trim()) return;
+    setScriptContent((prev) => normalizeScript(prev));
+  };
+
+  /** 添加出场角色 */
+  const handleAddCharacter = () => {
+    const name = newCharacterInput.trim();
+    if (!name) return;
+    const current = selectedScene?.characters ?? [];
+    if (current.includes(name)) {
+      setNewCharacterInput('');
+      return;
+    }
+    handleUpdateScene({ characters: [...current, name] });
+    setNewCharacterInput('');
+  };
+
+  /** 移除出场角色 */
+  const handleRemoveCharacter = (name: string) => {
+    const current = selectedScene?.characters ?? [];
+    handleUpdateScene({ characters: current.filter((c) => c !== name) });
+  };
+
+  /** 从正文台词自动提取角色并合并 */
+  const handleExtractCharacters = () => {
+    const extracted = extractCharacters(scriptContent);
+    if (extracted.length === 0) {
+      alert('未在正文中识别到台词角色');
+      return;
+    }
+    const current = selectedScene?.characters ?? [];
+    const merged = Array.from(new Set([...current, ...extracted]));
+    handleUpdateScene({ characters: merged });
+  };
 
   const handleAddScene = () => {
     const newId = generateModuleId('s');
@@ -127,23 +222,51 @@ const ScriptEditor: React.FC = () => {
     };
     setEpisodes([...episodes, newEpisode]);
     setSelectedSceneId(newId);
+    setScriptContent('');
   };
 
-  const totalWords = episodes.reduce((sum, s) => sum + s.words, 0);
+  const totalWords = episodes.reduce((sum, s) => sum + countWords(s.content), 0);
   const targetWords = 2400;
   const progressPercent = Math.round((totalWords / targetWords) * 100);
 
+  /** 将 AI 生成结果应用到编辑器/幕次 */
+  const applyGeneratedScript = (result: string) => {
+    const parsed = parseScriptToEpisodes(result, activeProjectId || '');
+    if (parsed.length === 0) {
+      // 无法解析：保留原文追加
+      setScriptContent((prev) => (prev ? prev + '\n\n' + result : result));
+      return;
+    }
+    if (parsed.length === 1 && !scriptContent.trim()) {
+      // 单幕且当前幕为空：填充当前幕
+      const p = parsed[0];
+      setScriptContent(p.content);
+      setEpisodes((prev) =>
+        prev.map((s) =>
+          s.id === selectedSceneId
+            ? { ...s, content: p.content, type: p.type, location: p.location, time: p.time, characters: p.characters }
+            : s
+        )
+      );
+      return;
+    }
+    // 多幕或当前幕已有内容：解析结果作为新幕次追加
+    setEpisodes((prev) => [...prev, ...parsed]);
+    setSelectedSceneId(parsed[0].id);
+    setScriptContent(parsed[0].content);
+  };
+
   const handleAiGenerate = async () => {
-    if (!aiInput.trim()) return;
+    if (!aiInput.trim() || !selectedScene) return;
     setAiGenerating(true);
     try {
       const service = getAIServiceForPurpose('script');
       const result = await service.generateScript({
         prompt: aiInput,
         context: scriptContent,
-        genre: selectedScene?.type,
+        genre: project?.genre,
       });
-      setScriptContent((prev) => (prev ? prev + '\n\n' + result : result));
+      applyGeneratedScript(result);
       setAiInput('');
     } catch (error) {
       console.error('AI 生成失败:', error);
@@ -155,14 +278,70 @@ const ScriptEditor: React.FC = () => {
 
   const handlePolish = async () => {
     if (!scriptContent.trim()) return;
+    if (import.meta.env.DEV) {
+      console.log(`[DramaFlow AI] 开始润色，正文长度：${scriptContent.length}`);
+    }
     setAiGenerating(true);
     try {
       const service = getAIServiceForPurpose('polish');
       const result = await service.polishScript(scriptContent);
-      setScriptContent(result);
+      const parsed = parseScriptToEpisodes(result, activeProjectId || '');
+      if (parsed.length === 1) {
+        const p = parsed[0];
+        setScriptContent(p.content);
+        setEpisodes((prev) =>
+          prev.map((s) =>
+            s.id === selectedSceneId
+              ? { ...s, content: p.content, type: p.type, location: p.location, time: p.time, characters: p.characters }
+              : s
+          )
+        );
+      } else if (parsed.length > 1) {
+        // 润色返回整部：按幕号回填现有幕次
+        const byNum = new Map(parsed.map((p) => [p.sceneNumber, p]));
+        setEpisodes((prev) =>
+          prev.map((s) => {
+            const p = byNum.get(s.sceneNumber);
+            return p
+              ? { ...s, content: p.content, type: p.type, location: p.location, time: p.time, characters: p.characters }
+              : s;
+          })
+        );
+        const cur = parsed.find((p) => p.sceneNumber === selectedScene?.sceneNumber);
+        if (cur) setScriptContent(cur.content);
+      } else {
+        setScriptContent(result);
+      }
     } catch (error) {
       console.error('AI 润色失败:', error);
       alert(error instanceof Error ? error.message : 'AI 润色失败');
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  /** 生成完整剧本：按项目题材 + 幕数，解析后替换全部幕次 */
+  const handleGenerateFullScript = async () => {
+    if (!selectedScene) return;
+    setAiGenerating(true);
+    try {
+      const service = getAIServiceForPurpose('script');
+      const result = await service.generateScript({
+        prompt: `请创作一部完整的${project?.genre || '都市'}题材短剧剧本，包含开场冲突、剧情推进和高潮收尾`,
+        genre: project?.genre,
+        sceneCount: project?.scenes || episodes.length,
+      });
+      const parsed = parseScriptToEpisodes(result, activeProjectId || '');
+      if (parsed.length === 0) {
+        alert('生成结果无法解析为幕次，请重试或使用底部输入框生成。');
+        return;
+      }
+      setEpisodes(parsed);
+      setSelectedSceneId(parsed[0].id);
+      setScriptContent(parsed[0].content);
+    } catch (error) {
+      console.error('整部生成失败:', error);
+      alert(error instanceof Error ? error.message : '整部生成失败');
     } finally {
       setAiGenerating(false);
     }
@@ -191,6 +370,27 @@ const ScriptEditor: React.FC = () => {
     );
   }
 
+  if (!selectedScene) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: colors.bg,
+          color: colors.textMute,
+          fontSize: 13,
+          gap: 10,
+        }}
+      >
+        <div style={{ fontSize: 28 }}>📝</div>
+        <div>还没有幕次，点击左侧「+ 幕」创建，或使用 AI 生成</div>
+      </div>
+    );
+  }
+
   const tagStyle: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
@@ -210,6 +410,20 @@ const ScriptEditor: React.FC = () => {
     fontSize: 10,
     letterSpacing: '0.08em',
     fontWeight: 500,
+  };
+
+  const propInputStyle: React.CSSProperties = {
+    width: '100%',
+    fontSize: 11,
+    color: colors.text,
+    background: colors.input,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 3,
+    padding: '4px 6px',
+    outline: 'none',
+    fontFamily: 'Inter, sans-serif',
+    boxSizing: 'border-box',
+    marginTop: 3,
   };
 
   return (
@@ -274,7 +488,9 @@ const ScriptEditor: React.FC = () => {
             return (
               <div
                 key={scene.id}
-                onClick={() => setSelectedSceneId(scene.id)}
+                onClick={() => handleSelectScene(scene)}
+                onMouseEnter={() => setHoveredSceneId(scene.id)}
+                onMouseLeave={() => setHoveredSceneId(null)}
                 style={{
                   padding: '10px 10px',
                   borderRadius: 4,
@@ -317,6 +533,31 @@ const ScriptEditor: React.FC = () => {
                   >
                     {scene.words}字
                   </span>
+                  {hoveredSceneId === scene.id && (
+                    <span style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleMoveScene(scene.id, -1); }}
+                        title="上移"
+                        style={{ width: 16, height: 16, fontSize: 9, lineHeight: '16px', padding: 0, background: colors.tag, border: 'none', borderRadius: 3, color: colors.tagText, cursor: 'pointer' }}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleMoveScene(scene.id, 1); }}
+                        title="下移"
+                        style={{ width: 16, height: 16, fontSize: 9, lineHeight: '16px', padding: 0, background: colors.tag, border: 'none', borderRadius: 3, color: colors.tagText, cursor: 'pointer' }}
+                      >
+                        ↓
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteScene(scene.id); }}
+                        title="删除幕次"
+                        style={{ width: 16, height: 16, fontSize: 9, lineHeight: '16px', padding: 0, background: colors.redBg, border: 'none', borderRadius: 3, color: colors.red, cursor: 'pointer' }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
                 </div>
 
                 {/* Tags row */}
@@ -472,6 +713,28 @@ const ScriptEditor: React.FC = () => {
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             <button
+              onClick={handleGenerateFullScript}
+              disabled={aiGenerating}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                background: colors.amber,
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: 4,
+                padding: '4px 10px',
+                fontSize: 11,
+                fontWeight: 500,
+                cursor: aiGenerating ? 'default' : 'pointer',
+                fontFamily: 'Inter, sans-serif',
+                opacity: aiGenerating ? 0.7 : 1,
+              }}
+            >
+              {aiGenerating ? '生成中…' : 'AI 生成整部'}
+            </button>
+            <button
+              onClick={handleFormat}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -515,25 +778,47 @@ const ScriptEditor: React.FC = () => {
 
         {/* Editor area */}
         <div style={{ flex: 1, overflow: 'auto' }}>
-          <textarea
-            value={scriptContent}
-            onChange={(e) => setScriptContent(e.target.value)}
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              outline: 'none',
-              resize: 'none',
-              background: '#FAFBFC',
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 13,
-              lineHeight: 2.1,
-              color: colors.text,
-              padding: '24px 36px',
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-            }}
-          />
+          {scriptContent.trim() ? (
+            <textarea
+              value={scriptContent}
+              onChange={(e) => setScriptContent(e.target.value)}
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                outline: 'none',
+                resize: 'none',
+                background: '#FAFBFC',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 13,
+                lineHeight: 2.1,
+                color: colors.text,
+                padding: '24px 36px',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 10,
+                background: '#FAFBFC',
+                color: colors.textMute,
+                fontSize: 12,
+              }}
+            >
+              <div style={{ fontSize: 32 }}>✍️</div>
+              <div>{selectedScene.title}还没有内容</div>
+              <div style={{ fontSize: 11 }}>
+                点击上方「AI 生成整部」一键创作，或在底部输入指令生成这一幕
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Bottom AI input bar */}
@@ -637,33 +922,57 @@ const ScriptEditor: React.FC = () => {
             场景属性
           </span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div>
+              <div style={{ fontSize: 10, color: colors.textMute, marginBottom: 3 }}>幕次标题</div>
+              <input
+                value={selectedScene.title}
+                onChange={(e) => handleUpdateScene({ title: e.target.value })}
+                style={propInputStyle}
+              />
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 11, color: colors.textMute }}>类型</span>
-              <span
+              <select
+                value={selectedScene.type}
+                onChange={(e) => handleUpdateScene({ type: e.target.value })}
                 style={{
                   fontSize: 11,
-                  color: colors.amber,
-                  fontWeight: 500,
-                  background: colors.amberBg,
-                  padding: '1px 6px',
+                  color: colors.text,
+                  background: colors.input,
+                  border: `1px solid ${colors.border}`,
                   borderRadius: 3,
+                  padding: '2px 4px',
+                  outline: 'none',
+                  cursor: 'pointer',
                 }}
               >
-                {selectedScene.type}
-              </span>
+                <option value="内景">内景</option>
+                <option value="外景">外景</option>
+              </select>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
               <span style={{ fontSize: 11, color: colors.textMute }}>地点</span>
-              <span style={{ fontSize: 11, color: colors.text }}>
-                {selectedScene.location}
-              </span>
+              <input
+                value={selectedScene.location}
+                onChange={(e) => handleUpdateScene({ location: e.target.value })}
+                placeholder="如：咖啡馆"
+                style={propInputStyle}
+              />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
               <span style={{ fontSize: 11, color: colors.textMute }}>时间段</span>
-              <span style={{ fontSize: 11, color: colors.text }}>{selectedScene.time}</span>
+              <select
+                value={selectedScene.time}
+                onChange={(e) => handleUpdateScene({ time: e.target.value })}
+                style={{ ...propInputStyle, cursor: 'pointer' }}
+              >
+                {['清晨', '白天', '傍晚', '黄昏', '夜晚', '深夜'].map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 11, color: colors.textMute }}>字数</span>
+              <span style={{ fontSize: 11, color: colors.textMute }}>本幕字数</span>
               <span
                 style={{
                   fontSize: 11,
@@ -671,7 +980,7 @@ const ScriptEditor: React.FC = () => {
                   fontFamily: "'JetBrains Mono', monospace",
                 }}
               >
-                {selectedScene.words}
+                {countWords(scriptContent)}
               </span>
             </div>
           </div>
@@ -721,9 +1030,40 @@ const ScriptEditor: React.FC = () => {
                 >
                   {char[0]}
                 </div>
-                <span style={{ fontSize: 11, color: colors.text }}>{char}</span>
+                <span style={{ fontSize: 11, color: colors.text, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{char}</span>
+                <button
+                  onClick={() => handleRemoveCharacter(char)}
+                  title={`移除 ${char}`}
+                  style={{ width: 16, height: 16, fontSize: 10, lineHeight: '16px', padding: 0, background: colors.tag, border: 'none', borderRadius: 3, color: colors.tagText, cursor: 'pointer', flexShrink: 0 }}
+                >
+                  ×
+                </button>
               </div>
             ))}
+            {selectedScene.characters.length === 0 && (
+              <div style={{ fontSize: 10, color: colors.textMute }}>暂无角色</div>
+            )}
+            <div style={{ display: 'flex', gap: 4 }}>
+              <input
+                value={newCharacterInput}
+                onChange={(e) => setNewCharacterInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleAddCharacter(); }}
+                placeholder="添加角色"
+                style={{ ...propInputStyle, flex: 1 }}
+              />
+              <button
+                onClick={handleAddCharacter}
+                style={{ padding: '0 8px', background: colors.amber, border: 'none', borderRadius: 3, color: '#fff', fontSize: 12, cursor: 'pointer', flexShrink: 0 }}
+              >
+                +
+              </button>
+            </div>
+            <button
+              onClick={handleExtractCharacters}
+              style={{ padding: '4px 8px', background: colors.blueBg, border: `1px solid ${colors.blueBg}`, borderRadius: 3, color: colors.blue, fontSize: 10, cursor: 'pointer' }}
+            >
+              从正文提取角色
+            </button>
           </div>
         </div>
 
@@ -748,6 +1088,7 @@ const ScriptEditor: React.FC = () => {
             {SUGGESTIONS.map((suggestion) => (
               <div
                 key={suggestion.text}
+                onClick={() => setAiInput(suggestion.text)}
                 style={{
                   padding: '8px 10px',
                   background: colors.blueBg,

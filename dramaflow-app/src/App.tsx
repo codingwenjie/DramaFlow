@@ -62,7 +62,7 @@ const App: React.FC = () => {
           <TabNav />
         )}
 
-        <div style={{ flex: 1, overflow: 'hidden' }}>
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           <ErrorBoundary>
             {activeView === 'overview' ? (
               <ProjectOverview

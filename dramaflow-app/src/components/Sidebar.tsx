@@ -50,7 +50,7 @@ const Sidebar: React.FC = () => {
             D
           </div>
           <span style={{ fontSize: 15, fontWeight: 600, color: C.text }}>
-            DramaAI
+            DramaFlow
           </span>
         </div>
         <span
@@ -169,70 +169,6 @@ const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* System config */}
-      <div
-        style={{
-          padding: '8px 12px',
-          borderTop: `1px solid ${C.border}`,
-        }}
-      >
-        {/* API & 用量 */}
-        <div
-          onClick={() => setActiveView('api-config')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '7px 8px',
-            borderRadius: 4,
-            cursor: 'pointer',
-            background: activeView === 'api-config' ? C.active : 'transparent',
-            borderLeft: activeView === 'api-config' ? `2px solid ${C.amber}` : '2px solid transparent',
-            marginLeft: -4,
-            paddingLeft: activeView === 'api-config' ? 6 : 8,
-          }}
-        >
-          <span style={{ fontSize: 12, color: activeView === 'api-config' ? C.amber : C.textMute, width: 14, textAlign: 'center' }}>⚡</span>
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: activeView === 'api-config' ? 500 : 400,
-              color: activeView === 'api-config' ? C.amber : C.text,
-            }}
-          >
-            API & 用量
-          </span>
-        </div>
-
-        {/* Prompt & Skill */}
-        <div
-          onClick={() => setActiveView('prompt-skills')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '7px 8px',
-            borderRadius: 4,
-            cursor: 'pointer',
-            background: activeView === 'prompt-skills' ? C.active : 'transparent',
-            borderLeft: activeView === 'prompt-skills' ? `2px solid ${C.amber}` : '2px solid transparent',
-            marginLeft: -4,
-            paddingLeft: activeView === 'prompt-skills' ? 6 : 8,
-          }}
-        >
-          <span style={{ fontSize: 12, color: activeView === 'prompt-skills' ? C.amber : C.textMute, width: 14, textAlign: 'center' }}>⌥</span>
-          <span
-            style={{
-              fontSize: 12,
-              fontWeight: activeView === 'prompt-skills' ? 500 : 400,
-              color: activeView === 'prompt-skills' ? C.amber : C.text,
-            }}
-          >
-            Prompt & Skill
-          </span>
-        </div>
-      </div>
-
       {/* Workflow steps section */}
       {activeView === 'workflow' && (
         <div style={{ padding: '8px 12px', borderTop: `1px solid ${C.border}` }}>
@@ -300,6 +236,71 @@ const Sidebar: React.FC = () => {
           })}
         </div>
       )}
+
+      {/* System config：固定在侧边栏底部 */}
+      <div
+        style={{
+          marginTop: 'auto',
+          padding: '8px 12px',
+          borderTop: `1px solid ${C.border}`,
+        }}
+      >
+        {/* API & 用量 */}
+        <div
+          onClick={() => setActiveView('api-config')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '7px 8px',
+            borderRadius: 4,
+            cursor: 'pointer',
+            background: activeView === 'api-config' ? C.active : 'transparent',
+            borderLeft: activeView === 'api-config' ? `2px solid ${C.amber}` : '2px solid transparent',
+            marginLeft: -4,
+            paddingLeft: activeView === 'api-config' ? 6 : 8,
+          }}
+        >
+          <span style={{ fontSize: 12, color: activeView === 'api-config' ? C.amber : C.textMute, width: 14, textAlign: 'center' }}>⚡</span>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: activeView === 'api-config' ? 500 : 400,
+              color: activeView === 'api-config' ? C.amber : C.text,
+            }}
+          >
+            API & 用量
+          </span>
+        </div>
+
+        {/* Prompt & Skill */}
+        <div
+          onClick={() => setActiveView('prompt-skills')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '7px 8px',
+            borderRadius: 4,
+            cursor: 'pointer',
+            background: activeView === 'prompt-skills' ? C.active : 'transparent',
+            borderLeft: activeView === 'prompt-skills' ? `2px solid ${C.amber}` : '2px solid transparent',
+            marginLeft: -4,
+            paddingLeft: activeView === 'prompt-skills' ? 6 : 8,
+          }}
+        >
+          <span style={{ fontSize: 12, color: activeView === 'prompt-skills' ? C.amber : C.textMute, width: 14, textAlign: 'center' }}>⌥</span>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: activeView === 'prompt-skills' ? 500 : 400,
+              color: activeView === 'prompt-skills' ? C.amber : C.text,
+            }}
+          >
+            Prompt & Skill
+          </span>
+        </div>
+      </div>
 
       {/* Bottom status bar */}
       <div

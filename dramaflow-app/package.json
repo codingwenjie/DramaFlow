@@ -1,25 +1,36 @@
 {
   "name": "dramaflow-app",
   "version": "1.0.0",
-  "description": "AI 短剧生成提效工具",
+  "description": "AI 短剧生成提效工具：剧本创作、分镜生成、角色管理、场景配音、视频合成一站式工作流",
   "author": "DramaFlow",
-  "private": true,
+  "license": "AGPL-3.0",
+  "keywords": [
+    "ai",
+    "short-drama",
+    "storyboard",
+    "tts",
+    "video",
+    "react",
+    "electron"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev:web": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "build:desktop": "vite build && tsc -p tsconfig.electron.json && electron-builder",
-    "build:electron": "tsc -p tsconfig.electron.json"
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "smoke:synthesis": "tsc -p tsconfig.electron.json && node scripts/synthesis-smoke-test.js"
   },
   "build": {
     "appId": "com.dramaflow.app",
     "productName": "DramaFlow",
     "directories": {
       "output": "release"
-    },
-    "publish": {
-      "provider": "github",
-      "owner": "your-github-username",
-      "repo": "dramaflow-releases"
     },
     "mac": {
       "category": "public.app-category.productivity",
@@ -38,6 +49,7 @@
     }
   },
   "dependencies": {
+    "dexie": "^4.4.4",
     "electron-updater": "^6.8.9",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

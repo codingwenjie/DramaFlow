@@ -131,6 +131,29 @@ const CharacterManager: React.FC = () => {
 
   const selected = characters.find((c) => c.id === selectedId) || characters[0];
 
+  if (!selected) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: C.bg,
+          fontFamily: 'Inter, sans-serif',
+          color: C.textMute,
+          fontSize: 13,
+          gap: 8,
+        }}
+      >
+        <div style={{ fontSize: 28 }}>👥</div>
+        <div>暂无角色</div>
+        <div style={{ fontSize: 11 }}>角色会在剧本生成后自动提取，或点击左侧"+"手动添加</div>
+      </div>
+    );
+  }
+
   const renderCharacterList = () => (
     <div
       style={{
