@@ -169,15 +169,16 @@ const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* AI Settings entry */}
+      {/* System config */}
       <div
         style={{
           padding: '8px 12px',
           borderTop: `1px solid ${C.border}`,
         }}
       >
+        {/* API & 用量 */}
         <div
-          onClick={() => setActiveView('ai-settings')}
+          onClick={() => setActiveView('api-config')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -185,31 +186,49 @@ const Sidebar: React.FC = () => {
             padding: '7px 8px',
             borderRadius: 4,
             cursor: 'pointer',
-            background: activeView === 'ai-settings' ? C.active : 'transparent',
-            borderLeft: activeView === 'ai-settings' ? `2px solid ${C.amber}` : '2px solid transparent',
+            background: activeView === 'api-config' ? C.active : 'transparent',
+            borderLeft: activeView === 'api-config' ? `2px solid ${C.amber}` : '2px solid transparent',
             marginLeft: -4,
-            paddingLeft: activeView === 'ai-settings' ? 6 : 8,
+            paddingLeft: activeView === 'api-config' ? 6 : 8,
           }}
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="7" cy="7" r="2.5" stroke={activeView === 'ai-settings' ? C.amber : C.textMute} strokeWidth="1.2" />
-            <path d="M7 1.5V3" stroke={activeView === 'ai-settings' ? C.amber : C.textMute} strokeWidth="1.2" strokeLinecap="round" />
-            <path d="M7 11V12.5" stroke={activeView === 'ai-settings' ? C.amber : C.textMute} strokeWidth="1.2" strokeLinecap="round" />
-            <path d="M2.5 7H4" stroke={activeView === 'ai-settings' ? C.amber : C.textMute} strokeWidth="1.2" strokeLinecap="round" />
-            <path d="M10 7H11.5" stroke={activeView === 'ai-settings' ? C.amber : C.textMute} strokeWidth="1.2" strokeLinecap="round" />
-            <path d="M3.8 3.8L4.85 4.85" stroke={activeView === 'ai-settings' ? C.amber : C.textMute} strokeWidth="1.2" strokeLinecap="round" />
-            <path d="M9.15 9.15L10.2 10.2" stroke={activeView === 'ai-settings' ? C.amber : C.textMute} strokeWidth="1.2" strokeLinecap="round" />
-            <path d="M3.8 10.2L4.85 9.15" stroke={activeView === 'ai-settings' ? C.amber : C.textMute} strokeWidth="1.2" strokeLinecap="round" />
-            <path d="M9.15 4.85L10.2 3.8" stroke={activeView === 'ai-settings' ? C.amber : C.textMute} strokeWidth="1.2" strokeLinecap="round" />
-          </svg>
+          <span style={{ fontSize: 12, color: activeView === 'api-config' ? C.amber : C.textMute, width: 14, textAlign: 'center' }}>⚡</span>
           <span
             style={{
               fontSize: 12,
-              fontWeight: activeView === 'ai-settings' ? 500 : 400,
-              color: activeView === 'ai-settings' ? C.amber : C.text,
+              fontWeight: activeView === 'api-config' ? 500 : 400,
+              color: activeView === 'api-config' ? C.amber : C.text,
             }}
           >
-            AI 模型配置
+            API & 用量
+          </span>
+        </div>
+
+        {/* Prompt & Skill */}
+        <div
+          onClick={() => setActiveView('prompt-skills')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '7px 8px',
+            borderRadius: 4,
+            cursor: 'pointer',
+            background: activeView === 'prompt-skills' ? C.active : 'transparent',
+            borderLeft: activeView === 'prompt-skills' ? `2px solid ${C.amber}` : '2px solid transparent',
+            marginLeft: -4,
+            paddingLeft: activeView === 'prompt-skills' ? 6 : 8,
+          }}
+        >
+          <span style={{ fontSize: 12, color: activeView === 'prompt-skills' ? C.amber : C.textMute, width: 14, textAlign: 'center' }}>⌥</span>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: activeView === 'prompt-skills' ? 500 : 400,
+              color: activeView === 'prompt-skills' ? C.amber : C.text,
+            }}
+          >
+            Prompt & Skill
           </span>
         </div>
       </div>
