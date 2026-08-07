@@ -51,6 +51,18 @@ function normalizeError(err: unknown): Error {
   return new Error(String(err));
 }
 
+/**
+ * AI 请求统一出口：
+ * - 开发环境：走 Vite 本地代理（/__dramaflow-ai-proxy），绕开服务商 CORS 限制
+ * - 生产环境：浏览器直连（依赖服务商允许跨域；百炼等需另行部署服务端代理）
+ */
+function fetchAI(url: string, init: RequestInit): Promise<Response> {
+  if (import.meta.env.DEV) {
+    return fetch(`/__dramaflow-ai-proxy?url=${encodeURIComponent(url)}`, init);
+  }
+  return fetch(url, init);
+}
+
 /** 核心 Chat Completions 调用：带超时与统一错误处理 */
 async function chatCompletion(
   config: AIModelConfig,
@@ -73,7 +85,7 @@ async function chatCompletion(
         max_tokens: maxTokens ?? config.maxTokens ?? 2048,
       });
     }
-    const res = await fetch(url, {
+    const res = await fetchAI(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -127,12 +139,117 @@ export async function testModelConnection(config: AIModelConfig): Promise<{
   if (!config.baseUrl) {
     return { ok: false, error: '未配置 Base URL' };
   }
+  const isImageOnly =
+    config.purposes.includes('image') &&
+    !config.purposes.some((p) => CHAT_PURPOSES.includes(p));
   const start = Date.now();
   try {
-    await chatCompletion(config, '你是一个连接测试助手。', '请只回复两个字：正常', 4);
+    if (isImageOnly) {
+      await requestImage(config, '一张纯色的测试图片', '1024x1024');
+    } else {
+      await chatCompletion(config, '你是一个连接测试助手。', '请只回复两个字：正常', 4);
+    }
     return { ok: true, latencyMs: Date.now() - start };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+const CHAT_PURPOSES = ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic'];
+
+/**
+ * 把 DashScope 相关的 Base URL 归一化为原生 API 根地址：
+ * - https://xxx/compatible-mode/v1  → https://xxx/api/v1
+ * - https://xxx/api/v1              → 保持原样
+ * - https://xxx/v1                  → https://xxx/api/v1
+ */
+function normalizeDashScopeBaseUrl(baseUrl: string): string {
+  const trimmed = baseUrl.replace(/\/+$/, '');
+  if (/\/compatible-mode\/v1$/i.test(trimmed)) {
+    return trimmed.replace(/\/compatible-mode\/v1$/i, '/api/v1');
+  }
+  if (/\/v1$/i.test(trimmed)) {
+    return trimmed.replace(/\/v1$/i, '/api/v1');
+  }
+  return trimmed;
+}
+
+/**
+ * 通义万相 Qwen-Image：走阿里云百炼原生 multimodal-generation 接口。
+ * 请求返回的图片 URL 有效期约 24 小时，因此下载后转成 dataURL 再入库。
+ */
+async function requestQwenImage(
+  config: AIModelConfig,
+  prompt: string,
+  size: string
+): Promise<string> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
+  try {
+    const url = `${normalizeDashScopeBaseUrl(config.baseUrl)}/services/aigc/multimodal-generation/generation`;
+    if (import.meta.env.DEV) {
+      console.log('[DramaFlow AI 图片请求]', {
+        model: config.model,
+        baseUrl: config.baseUrl,
+        endpoint: url,
+        prompt,
+        size: size.replace(/x/g, '*'),
+        parameters: { prompt_extend: false, n: 1 },
+      });
+    }
+    const res = await fetchAI(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        input: {
+          messages: [{ role: 'user', content: [{ text: prompt }] }],
+        },
+        parameters: {
+          prompt_extend: false,
+          n: 1,
+          size: size.replace(/x/g, '*'),
+        },
+      }),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      const detail = res.status === 404 ? `\n实际请求地址：${url}` : body ? `（${body.slice(0, 120)}）` : '';
+      if (import.meta.env.DEV) {
+        console.log('[DramaFlow AI 图片错误]', `${mapHttpError(res.status)}${detail}`);
+      }
+      throw new Error(`${mapHttpError(res.status)}${detail}`);
+    }
+    const data = (await res.json()) as {
+      output?: {
+        choices?: { message?: { content?: { type?: string; image?: string }[] } }[];
+      };
+    };
+    const imageUrl = data.output?.choices?.[0]?.message?.content?.find((c) => c.image)?.image;
+    if (!imageUrl) {
+      throw new Error('图像接口未返回有效数据');
+    }
+    if (import.meta.env.DEV) {
+      console.log('[DramaFlow AI 图片响应]', { model: config.model, imageUrl });
+    }
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) {
+      throw new Error(`图片下载失败（HTTP ${imgRes.status}）`);
+    }
+    const blob = await imgRes.blob();
+    return await blobToDataURL(blob);
+  } catch (err) {
+    const normalized = normalizeError(err);
+    if (import.meta.env.DEV) {
+      console.log('[DramaFlow AI 图片错误]', normalized.message);
+    }
+    throw normalized;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -142,6 +259,11 @@ export async function requestImage(
   prompt: string,
   size = '1024x1024'
 ): Promise<string> {
+  // 通义万相 Qwen-Image 系列：阿里云百炼实例上没有 OpenAI 兼容图片接口，走原生接口
+  if (config.provider === 'dashscope' && /^qwen-image/i.test(config.model)) {
+    return requestQwenImage(config, prompt, size);
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
   try {
@@ -149,7 +271,7 @@ export async function requestImage(
     if (import.meta.env.DEV) {
       console.log('[DramaFlow AI 图片请求]', { model: config.model, baseUrl: config.baseUrl, prompt, size });
     }
-    const res = await fetch(url, {
+    const res = await fetchAI(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -159,7 +281,8 @@ export async function requestImage(
         model: config.model,
         prompt,
         n: 1,
-        size,
+        // 阿里云百炼兼容接口使用 `1024*1024` 格式，OpenAI 使用 `1024x1024`
+        size: config.provider === 'dashscope' ? size.replace(/x/g, '*') : size,
         response_format: 'b64_json',
       }),
       signal: controller.signal,

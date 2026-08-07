@@ -121,7 +121,7 @@ async function generateImagesInBackground(
       const shot = shots[i];
       try {
         const service = getAIServiceForPurpose('image');
-        const dataUrl = await service.generateImage({ prompt: shot.desc, size: '512x512' });
+        const dataUrl = await service.generateImage({ prompt: shot.desc, size: '1024x1024' });
         const blob = await (await fetch(dataUrl)).blob();
         await saveProjectFile(projectId, shot.id, blob);
         onImage(shot.id, `db://${shot.id}`);

@@ -99,6 +99,16 @@ export const DEFAULT_MODELS: AIModelConfig[] = [
     purposes: ['image'],
   },
   {
+    id: 'dashscope-qwen-image',
+    name: '通义万相 Qwen-Image',
+    provider: 'dashscope',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    apiKey: '',
+    model: 'qwen-image-3.0',
+    enabled: false,
+    purposes: ['image'],
+  },
+  {
     id: 'custom-tts',
     name: '自定义 TTS',
     provider: 'custom',
@@ -175,6 +185,15 @@ export const MODEL_PRESETS: ModelPreset[] = [
     baseUrl: 'https://api.siliconflow.cn/v1',
     model: 'black-forest-labs/FLUX.1-schnell',
     description: '文生图，注册送免费额度，OpenAI 兼容',
+    purposes: ['image'],
+  },
+  {
+    key: 'dashscope-image',
+    label: '通义万相 Qwen-Image',
+    provider: 'dashscope',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: 'qwen-image-3.0',
+    description: '阿里云百炼文生图，qwen-image-3.0',
     purposes: ['image'],
   },
 ];
