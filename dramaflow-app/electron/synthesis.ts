@@ -25,6 +25,9 @@ export interface SynthesisLineInput {
   text: string;
   speed: number;
   volume: number;
+  /** 配音模块生成的 AI 音频（base64）。有则直接使用，无则回退本地 say */
+  audioBase64?: string;
+  audioFormat?: string;
 }
 
 export interface SynthesisJobInput {
@@ -85,17 +88,27 @@ export async function runSynthesis(
       imagePaths.push(imgPath);
     }
 
-    // 2. 本地配音生成（macOS say，中文语音；非 macOS 自动降级为静音）
+    // 2. 配音生成：优先使用配音模块生成的 AI 音频，没有时回退本地 say（非 macOS 自动静音）
     onProgress({ stage: 'tts', percent: 8, message: '配音生成' });
     const audioPaths: Record<string, string | null> = {};
     for (let i = 0; i < job.lines.length; i++) {
       const line = job.lines[i];
-      const outPath = path.join(workDir, `line-${String(i + 1).padStart(2, '0')}.aiff`);
-      audioPaths[line.id] = await synthesizeSpeech(line, outPath);
+      const index = String(i + 1).padStart(2, '0');
+      if (line.audioBase64) {
+        const ext = line.audioFormat === 'audio/mpeg' ? 'mp3' : 'wav';
+        const outPath = path.join(workDir, `line-${index}.${ext}`);
+        fs.writeFileSync(outPath, Buffer.from(line.audioBase64, 'base64'));
+        audioPaths[line.id] = outPath;
+      } else {
+        const outPath = path.join(workDir, `line-${index}.aiff`);
+        audioPaths[line.id] = await synthesizeSpeech(line, outPath);
+      }
       onProgress({
         stage: 'tts',
         percent: 8 + Math.round(((i + 1) / job.lines.length) * 12),
-        message: `配音生成 ${i + 1}/${job.lines.length}`,
+        message: line.audioBase64
+          ? `配音接入 ${i + 1}/${job.lines.length}`
+          : `本地配音 ${i + 1}/${job.lines.length}`,
       });
     }
 

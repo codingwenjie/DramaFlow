@@ -46,6 +46,7 @@ async function forward(req: IncomingMessage, res: ServerResponse): Promise<void>
     }
 
     const isBodyless = req.method === 'GET' || req.method === 'HEAD';
+    console.log(`[DramaFlow AI 代理] ${req.method} ${target.origin}${target.pathname}`);
     const upstream = await fetch(target, {
       method: req.method,
       headers,

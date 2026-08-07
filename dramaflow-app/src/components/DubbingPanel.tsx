@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { C } from '../constants';
 import { Button, StatusBadge, SectionLabel, Divider, ProgressBar } from './common';
 import { useAppStore } from '../store/useAppStore';
-import { loadModuleData, saveModuleData } from '../data/storage';
-import { DubbingLine } from '../data/types';
+import { loadModuleData, saveModuleData, saveProjectFile, loadProjectFile } from '../data/storage';
+import { Character, DubbingLine, Episode } from '../data/types';
 import { getAIServiceForPurpose } from '../services';
+import { dataURLToBlob } from '../services/ai-http';
+import { extractDubbingLinesFromEpisodes, syncDubbingLines } from '../services/dubbing-sync';
 
 const DEFAULT_LINES: DubbingLine[] = [
   { id: 'd001', projectId: '', scene: 1, character: '林晓', characterColor: '#E69500', text: '天哪，对不起！对不起！我真的不是故意的……', status: 'done', duration: '3.2s', emotion: 'panic', speed: 1.0, volume: 80 },
@@ -35,16 +37,31 @@ const emotionMap: Record<string, string> = {
   surprise: 'surprise',
 };
 
+/** 按字数粗略估算配音时长 */
+function estimateDuration(text: string): string {
+  const seconds = Math.max(0.6, Math.round(text.replace(/\s/g, '').length * 0.25 * 10) / 10);
+  return `${seconds.toFixed(1)}s`;
+}
+
 const DubbingPanel: React.FC = () => {
   const activeProjectId = useAppStore((s) => s.activeProjectId);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [lines, setLines] = useState<DubbingLine[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [batchGenerating, setBatchGenerating] = useState(false);
+  const charactersRef = React.useRef<Character[]>([]);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     if (!activeProjectId) return;
     const data = loadModuleData<DubbingLine[]>(activeProjectId, 'dubbing', DEFAULT_LINES);
-    setLines(data);
+    const epData = loadModuleData<Episode[]>(activeProjectId, 'episodes', []);
+    const charData = loadModuleData<Character[]>(activeProjectId, 'characters', []);
+    charactersRef.current = charData;
+    const scriptLines = extractDubbingLinesFromEpisodes(epData, charData);
+    // 台词从剧本自动带入：已有设置/音频保留，剧本新增台词自动补入
+    setLines(syncDubbingLines(data, scriptLines));
     setLoaded(true);
   }, [activeProjectId]);
 
@@ -94,16 +111,29 @@ const DubbingPanel: React.FC = () => {
     );
     try {
       const service = getAIServiceForPurpose('dubbing');
-      await service.generateDubbing({
+      const char = charactersRef.current.find((c) => c.name === line.character);
+      const dataUrl = await service.generateDubbing({
         text: line.text,
         character: line.character,
+        voice: char?.currentVoice,
         emotion: line.emotion,
         speed: line.speed,
         volume: line.volume,
       });
+      const blob = dataURLToBlob(dataUrl);
+      if (activeProjectId) {
+        await saveProjectFile(activeProjectId, `dub-${id}`, blob);
+      }
       setLines((prev) =>
         prev.map((l) =>
-          l.id === id ? { ...l, status: 'done', duration: '3.0s' } : l,
+          l.id === id
+            ? {
+                ...l,
+                status: 'done',
+                audioUrl: `db://dub-${id}`,
+                duration: estimateDuration(l.text),
+              }
+            : l,
         ),
       );
     } catch (error) {
@@ -117,8 +147,46 @@ const DubbingPanel: React.FC = () => {
     }
   };
 
-  const handleBatchGenerate = () => {
-    // Placeholder
+  /** 批量配音：依次生成所有待处理台词 */
+  const handleBatchGenerate = async () => {
+    if (batchGenerating) return;
+    const pending = lines.filter((l) => l.status === 'pending');
+    if (pending.length === 0) return;
+    setBatchGenerating(true);
+    try {
+      for (const line of pending) {
+        await handleGenerate(line.id);
+      }
+    } finally {
+      setBatchGenerating(false);
+    }
+  };
+
+  /** 播放/暂停某条配音 */
+  const handlePlay = async (id: string) => {
+    if (playingId === id) {
+      audioRef.current?.pause();
+      setPlayingId(null);
+      return;
+    }
+    const line = lines.find((l) => l.id === id);
+    if (!line?.audioUrl) return;
+    let url = line.audioUrl;
+    if (line.audioUrl.startsWith('db://')) {
+      const blob = await loadProjectFile(activeProjectId || '', line.audioUrl.slice(5));
+      if (!blob) return;
+      url = URL.createObjectURL(blob);
+    }
+    if (!audioRef.current) audioRef.current = new Audio();
+    const audio = audioRef.current;
+    audio.src = url;
+    audio.onended = () => setPlayingId(null);
+    audio.onerror = () => {
+      setPlayingId(null);
+      alert('音频播放失败');
+    };
+    void audio.play();
+    setPlayingId(id);
   };
 
   const renderProgressBar = () => (
@@ -165,8 +233,13 @@ const DubbingPanel: React.FC = () => {
         </div>
         <ProgressBar percent={progressPercent} />
       </div>
-      <Button variant="primary" size="md" onClick={handleBatchGenerate}>
-        批量配音
+      <Button
+        variant="primary"
+        size="md"
+        onClick={handleBatchGenerate}
+        disabled={batchGenerating || doneCount === totalCount || totalCount === 0}
+      >
+        {batchGenerating ? '配音中…' : '✦ 批量配音'}
       </Button>
     </div>
   );
@@ -270,8 +343,23 @@ const DubbingPanel: React.FC = () => {
           {line.duration || '--'}
         </span>
 
-        <div style={{ width: 48, flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
-          {line.status === 'pending' ? (
+        <div style={{ width: 56, flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
+          {line.status === 'generating' ? (
+            <Button size="sm" variant="secondary" disabled>
+              生成中…
+            </Button>
+          ) : line.status === 'done' && line.audioUrl ? (
+            <Button
+              size="sm"
+              variant={playingId === line.id ? 'primary' : 'secondary'}
+              onClick={(e) => {
+                e.stopPropagation();
+                void handlePlay(line.id);
+              }}
+            >
+              {playingId === line.id ? '⏸ 停止' : '▶ 播放'}
+            </Button>
+          ) : (
             <Button
               size="sm"
               variant="primary"
@@ -280,19 +368,9 @@ const DubbingPanel: React.FC = () => {
                 handleGenerate(line.id);
               }}
             >
-              生成
+              {line.status === 'done' ? '重新生成' : '生成'}
             </Button>
-          ) : line.status === 'done' ? (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={(e) => {
-                e.stopPropagation();
-              }}
-            >
-              播放
-            </Button>
-          ) : null}
+          )}
         </div>
       </div>
     );
@@ -404,12 +482,53 @@ const DubbingPanel: React.FC = () => {
 
       {/* Scrollable list */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        {lines.map((line) => renderLineRow(line))}
+        {lines.length === 0 ? (
+          <div
+            style={{
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              color: C.textMute,
+              fontFamily: 'Inter, sans-serif',
+              fontSize: 13,
+            }}
+          >
+            <div style={{ fontSize: 28 }}>🎙</div>
+            <div>还没有配音台词</div>
+            <div style={{ fontSize: 11 }}>
+              先在「剧本创作」模块生成或写好剧本，台词会自动同步到这里
+            </div>
+          </div>
+        ) : (
+          lines.map((line) => renderLineRow(line))
+        )}
       </div>
     </div>
   );
 
-  const renderWaveformPreview = () => {
+  const renderWaveformPreview = (hasAudio: boolean) => {
+    if (!hasAudio) {
+      return (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: 48,
+            background: C.inputBg,
+            borderRadius: 4,
+            fontSize: 10,
+            color: C.textMute,
+            fontFamily: 'Inter, sans-serif',
+          }}
+        >
+          未生成
+        </div>
+      );
+    }
     const barCount = 30;
     const bars = Array.from({ length: barCount }, () => Math.random() * 0.7 + 0.3);
 
@@ -707,7 +826,7 @@ const DubbingPanel: React.FC = () => {
             >
               波形预览
             </div>
-            {renderWaveformPreview()}
+            {renderWaveformPreview(!!selected.audioUrl)}
           </div>
         </div>
 
@@ -718,7 +837,7 @@ const DubbingPanel: React.FC = () => {
               variant="primary"
               size="md"
               style={{ width: '100%' }}
-              onClick={() => {}}
+              onClick={() => handleGenerate(selected.id)}
             >
               重新生成
             </Button>
@@ -727,7 +846,7 @@ const DubbingPanel: React.FC = () => {
               variant="secondary"
               size="md"
               style={{ width: '100%' }}
-              onClick={() => {}}
+              disabled
             >
               生成中…
             </Button>

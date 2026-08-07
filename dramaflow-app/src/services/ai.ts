@@ -1,4 +1,4 @@
-import { AIModelPurpose, AIModelSettings } from '../data/types';
+import { AIModelConfig, AIModelPurpose, AIModelSettings } from '../data/types';
 import { createMockService } from './ai-mock';
 import { createOpenAIService } from './ai-openai';
 import { getModelForPurpose, loadModelSettings } from './ai-models';
@@ -29,6 +29,8 @@ export interface AIGenerateShotsParams {
 export interface AIDubbingParams {
   text: string;
   character: string;
+  /** 角色当前选定的声音标签（如「男声-沉稳磁性」） */
+  voice?: string;
   emotion: string;
   speed: number;
   volume: number;
@@ -48,6 +50,8 @@ export interface AIGenerateSuggestionParams {
 export interface AIGenerateImageParams {
   prompt: string;
   size?: string;
+  /** 参考图（dataURL），支持图生图/角色一致性的厂商会使用 */
+  referenceImages?: string[];
 }
 
 export interface AIService {
@@ -69,16 +73,8 @@ export function createAIService(config: AIServiceConfig): AIService {
   return createMockService();
 }
 
-// 根据用途获取对应的 AI 服务实例
-export function getAIServiceForPurpose(
-  purpose: AIModelPurpose,
-  settings: AIModelSettings = loadModelSettings()
-): AIService {
-  const model = getModelForPurpose(settings, purpose);
-  if (!model) {
-    throw new Error(`没有可用的 AI 模型用于「${purpose}」，请在 AI 模型配置中启用至少一个支持该用途的模型。`);
-  }
-
+/** 根据指定模型 + 用途创建 AI 服务实例（分镜模块可手动指定文生图模型） */
+export function getAIServiceForModel(model: AIModelConfig, purpose: AIModelPurpose): AIService {
   if (import.meta.env.DEV) {
     console.log(`[DramaFlow AI] 用途「${purpose}」→ 模型「${model.name}」(${model.provider}${model.provider === 'mock' ? ' · 模拟模式，不会发起网络请求' : ''})`);
   }
@@ -89,6 +85,18 @@ export function getAIServiceForPurpose(
 
   // 所有非 mock 模型均走 OpenAI 兼容协议（openai / deepseek / dashscope / zhipu / custom）
   return createOpenAIService(model, purpose);
+}
+
+// 根据用途获取对应的 AI 服务实例
+export function getAIServiceForPurpose(
+  purpose: AIModelPurpose,
+  settings: AIModelSettings = loadModelSettings()
+): AIService {
+  const model = getModelForPurpose(settings, purpose);
+  if (!model) {
+    throw new Error(`没有可用的 AI 模型用于「${purpose}」，请在 AI 模型配置中启用至少一个支持该用途的模型。`);
+  }
+  return getAIServiceForModel(model, purpose);
 }
 
 // 兼容旧调用：默认返回通用/剧本用途的服务

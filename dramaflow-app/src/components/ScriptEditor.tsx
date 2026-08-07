@@ -3,10 +3,11 @@ import { C } from '../constants';
 import { useAppStore } from '../store/useAppStore';
 import { useProjectStore } from '../store/useProjectStore';
 import { loadModuleData, saveModuleData, generateModuleId } from '../data/storage';
-import { Episode } from '../data/types';
+import { Character, Episode } from '../data/types';
 import { getAIServiceForPurpose } from '../services';
 import { parseScriptToEpisodes, countWords } from '../services/script-parser';
 import { normalizeScript, extractCharacters } from '../services/script-format';
+import { syncCharactersFromScript } from '../services/character-sync';
 
 const colors = {
   ...C,
@@ -114,11 +115,14 @@ const ScriptEditor: React.FC = () => {
   // 自动保存
   useEffect(() => {
     if (!activeProjectId || !loaded) return;
-    saveModuleData(
-      activeProjectId,
-      'episodes',
-      episodes.map((e) => ({ ...e, words: countWords(e.content) }))
-    );
+    const syncedEpisodes = episodes.map((e) => ({ ...e, words: countWords(e.content) }));
+    saveModuleData(activeProjectId, 'episodes', syncedEpisodes);
+    // 角色自动同步：剧本中新增的角色自动带入角色模块
+    const chars = loadModuleData<Character[]>(activeProjectId, 'characters', []);
+    const merged = syncCharactersFromScript(chars, syncedEpisodes);
+    if (merged.length !== chars.length) {
+      saveModuleData(activeProjectId, 'characters', merged);
+    }
   }, [episodes, activeProjectId, loaded]);
 
   // 编辑器内容同步回当前幕（修复切换幕次/刷新丢内容的问题）

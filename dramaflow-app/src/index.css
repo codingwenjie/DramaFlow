@@ -40,6 +40,52 @@ body {
   font-size: 13px;
 }
 
+/* Markdown 预览（人物描述等）：紧凑排版，贴合应用视觉 */
+.md-view h1,
+.md-view h2,
+.md-view h3,
+.md-view h4,
+.md-view h5,
+.md-view h6 {
+  margin: 10px 0 6px;
+  font-family: 'Outfit', sans-serif;
+  color: #1A1D24;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.md-view h1 { font-size: 16px; }
+.md-view h2 { font-size: 14px; }
+.md-view h3 { font-size: 13px; }
+.md-view h4,
+.md-view h5,
+.md-view h6 { font-size: 12px; }
+.md-view p { margin: 0 0 8px; }
+.md-view ul,
+.md-view ol { margin: 4px 0 8px; padding-left: 18px; }
+.md-view li { margin-bottom: 3px; }
+.md-view blockquote {
+  margin: 6px 0;
+  padding: 4px 10px;
+  border-left: 3px solid #E5B94B;
+  background: #FFFDF0;
+  border-radius: 3px;
+  color: #7A6010;
+}
+.md-view code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  background: #EEF0F4;
+  color: #B45309;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.md-view hr {
+  border: none;
+  border-top: 1px solid #E0E3EA;
+  margin: 10px 0;
+}
+.md-view strong { font-weight: 600; color: #1A1D24; }
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

@@ -1,4 +1,4 @@
-import { Project, Episode, Character, Shot, DubbingLine, SynthesisConfig } from './types';
+import { Project, Episode, Character, Shot, DubbingLine, SynthesisConfig, VideoTask } from './types';
 import { dbGet, dbSet, dbDelete, dbAllKeys, dbSaveFile, dbLoadFile, dbDeleteFile, dbDeleteFilesByPrefix } from './db';
 
 const STORAGE_KEY = 'dramaflow-data';
@@ -52,6 +52,9 @@ export async function initStorage(): Promise<void> {
   try {
     const keys = await dbAllKeys();
     for (const key of keys) {
+      // localStorage 已有该键时以 localStorage 为准：它是每次写入的实时缓存，
+      // 避免用 IndexedDB 中的旧快照覆盖用户刚保存的配置（曾导致模型配置丢失）
+      if (localStorage.getItem(key) != null) continue;
       const value = await dbGet(key);
       if (value != null) localSet(key, value);
     }
@@ -69,6 +72,11 @@ export async function initStorage(): Promise<void> {
   } catch (e) {
     console.error('IndexedDB 恢复失败，继续使用 localStorage：', e);
   }
+}
+
+/** 持久化写入：localStorage 同步缓存 + IndexedDB 异步备份（保持双写一致） */
+export function savePersistent(key: string, value: string): void {
+  syncSet(key, value);
 }
 
 // ===== 项目列表 =====
@@ -127,7 +135,7 @@ export function generateModuleId(prefix: string): string {
 }
 
 // ===== 模块数据（按项目隔离） =====
-type ModuleData = Episode[] | Character[] | Shot[] | DubbingLine[] | SynthesisConfig;
+type ModuleData = Episode[] | Character[] | Shot[] | DubbingLine[] | SynthesisConfig | VideoTask[];
 
 function moduleKey(projectId: string, module: string): string {
   return `dramaflow-module-${projectId}-${module}`;
@@ -157,7 +165,7 @@ export function clearModuleData(projectId: string, module: string): void {
 }
 
 export function clearAllProjectData(projectId: string): void {
-  const modules = ['episodes', 'characters', 'shots', 'dubbing', 'synthesis'];
+  const modules = ['episodes', 'characters', 'shots', 'dubbing', 'synthesis', 'videoTasks'];
   modules.forEach((m) => clearModuleData(projectId, m));
   deleteProjectFiles(projectId);
 }

@@ -1,5 +1,5 @@
 import { AIModelConfig, AIModelPurpose, AIModelSettings } from '../data/types';
-import { generateId } from '../data/storage';
+import { generateId, savePersistent } from '../data/storage';
 
 const STORAGE_KEY = 'dramaflow-ai-models';
 
@@ -36,7 +36,7 @@ export const DEFAULT_MODELS: AIModelConfig[] = [
     apiKey: '',
     model: 'mock',
     enabled: true,
-    purposes: ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic', 'image'],
+    purposes: ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic', 'image', 'dubbing'],
   },
   {
     id: 'deepseek-chat',
@@ -119,6 +119,46 @@ export const DEFAULT_MODELS: AIModelConfig[] = [
     purposes: ['dubbing'],
   },
   {
+    id: 'dashscope-tts',
+    name: '通义语音 Qwen-TTS',
+    provider: 'dashscope',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    apiKey: '',
+    model: 'qwen3-tts-flash',
+    enabled: false,
+    purposes: ['dubbing'],
+  },
+  {
+    id: 'kling-video',
+    name: '可灵 Kling 图生视频',
+    provider: 'kling',
+    baseUrl: 'https://api.klingai.com',
+    apiKey: '',
+    model: 'kling-v1-6',
+    enabled: false,
+    purposes: ['video'],
+  },
+  {
+    id: 'volcengine-video',
+    name: '火山 Seedance 图生视频',
+    provider: 'volcengine',
+    baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+    apiKey: '',
+    model: 'doubao-seedance-1-5-pro-251215',
+    enabled: false,
+    purposes: ['video'],
+  },
+  {
+    id: 'dashscope-wan-video',
+    name: '通义万相 Wan 图生视频',
+    provider: 'dashscope',
+    baseUrl: 'https://dashscope.aliyuncs.com/api/v1',
+    apiKey: '',
+    model: 'wanx2.1-i2v-turbo',
+    enabled: false,
+    purposes: ['video'],
+  },
+  {
     id: 'custom-video',
     name: '自定义视频模型',
     provider: 'custom',
@@ -196,6 +236,42 @@ export const MODEL_PRESETS: ModelPreset[] = [
     description: '阿里云百炼文生图，qwen-image-3.0',
     purposes: ['image'],
   },
+  {
+    key: 'dashscope-tts',
+    label: '通义语音 Qwen-TTS',
+    provider: 'dashscope',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    model: 'qwen3-tts-flash',
+    description: '阿里云百炼语音合成，qwen3-tts-flash（可改为 qwen-tts）',
+    purposes: ['dubbing'],
+  },
+  {
+    key: 'kling-video',
+    label: '可灵 Kling 视频',
+    provider: 'kling',
+    baseUrl: 'https://api.klingai.com',
+    model: 'kling-v1-6',
+    description: '图生视频，异步任务，按需付费（模型名可改为 kling-v2 系列）',
+    purposes: ['video'],
+  },
+  {
+    key: 'volcengine-video',
+    label: '火山 Seedance 视频',
+    provider: 'volcengine',
+    baseUrl: 'https://ark.cn-beijing.volces.com/api/v3',
+    model: 'doubao-seedance-1-5-pro-251215',
+    description: '豆包 Seedance 图生视频，异步任务',
+    purposes: ['video'],
+  },
+  {
+    key: 'dashscope-wan-video',
+    label: '通义万相 Wan 视频',
+    provider: 'dashscope',
+    baseUrl: 'https://dashscope.aliyuncs.com/api/v1',
+    model: 'wanx2.1-i2v-turbo',
+    description: '万相图生视频，异步任务（模型名可改为 wan2.x 系列）',
+    purposes: ['video'],
+  },
 ];
 
 export function getDefaultSettings(): AIModelSettings {
@@ -207,12 +283,32 @@ export function getDefaultSettings(): AIModelSettings {
       storyboard: 'mock-default',
       character: 'mock-default',
       suggestion: 'mock-default',
-      image: 'openai-dalle3',
-      dubbing: 'custom-tts',
+      image: 'dashscope-qwen-image',
+      dubbing: 'mock-default',
       video: 'custom-video',
       generic: 'mock-default',
     },
   };
+}
+
+/** 已启用且支持文生图用途的模型列表，用于分镜模块手动选择 */
+export function getEnabledImageModels(
+  settings: AIModelSettings = loadModelSettings()
+): AIModelConfig[] {
+  return settings.models.filter((m) => m.enabled && m.purposes.includes('image'));
+}
+
+/** 获取项目实际使用的文生图模型：项目手动选择优先，未选择时回退全局默认 */
+export function getImageModelForProject(
+  project?: { imageModelId?: string },
+  settings: AIModelSettings = loadModelSettings()
+): AIModelConfig | undefined {
+  const enabled = getEnabledImageModels(settings);
+  if (project?.imageModelId) {
+    const picked = enabled.find((m) => m.id === project.imageModelId);
+    if (picked) return picked;
+  }
+  return getModelForPurpose(settings, 'image');
 }
 
 export function loadModelSettings(): AIModelSettings {
@@ -224,12 +320,29 @@ export function loadModelSettings(): AIModelSettings {
       return defaults;
     }
     const parsed = JSON.parse(data) as AIModelSettings;
-    // 合并默认模型，确保新用途有对应模型
-    if (!parsed.models || parsed.models.length === 0) {
-      parsed.models = DEFAULT_MODELS;
+    // 合并内置模型：新增的内置模型（如通义 TTS）自动加入，
+    // 内置模拟模型按最新用途扩展，保证离线模式覆盖所有新增用途
+    const modelsById = new Map<string, AIModelConfig>();
+    for (const m of parsed.models ?? []) modelsById.set(m.id, m);
+    for (const def of DEFAULT_MODELS) {
+      const existing = modelsById.get(def.id);
+      if (!existing) {
+        modelsById.set(def.id, def);
+      } else if (def.id === 'mock-default') {
+        modelsById.set(def.id, {
+          ...existing,
+          purposes: Array.from(new Set([...(existing.purposes ?? []), ...def.purposes])),
+        });
+      }
     }
-    if (!parsed.defaults) {
-      parsed.defaults = getDefaultSettings().defaults;
+    parsed.models = Array.from(modelsById.values());
+    parsed.defaults = parsed.defaults ?? getDefaultSettings().defaults;
+    // 纠正指向已停用/不存在模型的默认分配（例如旧版 custom-tts 占位），回退到模拟模型
+    for (const purpose of Object.keys(parsed.defaults) as AIModelPurpose[]) {
+      const id = parsed.defaults[purpose];
+      if (!id) continue;
+      const m = parsed.models.find((x) => x.id === id);
+      if (!m || !m.enabled) parsed.defaults[purpose] = 'mock-default';
     }
     return parsed;
   } catch (e) {
@@ -240,7 +353,7 @@ export function loadModelSettings(): AIModelSettings {
 
 export function saveModelSettings(settings: AIModelSettings): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    savePersistent(STORAGE_KEY, JSON.stringify(settings));
   } catch (e) {
     console.error('Failed to save AI model settings:', e);
   }

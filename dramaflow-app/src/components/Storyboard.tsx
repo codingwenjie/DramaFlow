@@ -4,14 +4,20 @@ import { Button, Tag } from './common';
 import { useAppStore } from '../store/useAppStore';
 import { useProjectStore } from '../store/useProjectStore';
 import { loadModuleData, saveModuleData, saveProjectFile, loadProjectFile } from '../data/storage';
-import { Episode, Shot } from '../data/types';
-import { getAIServiceForPurpose } from '../services';
+import { AIModelConfig, Character, Episode, Shot, VideoTask } from '../data/types';
+import { getAIServiceForPurpose, getAIServiceForModel } from '../services';
+import { dataURLToBlob } from '../services/ai-http';
+import { getEnabledImageModels, getModelForPurpose, loadModelSettings } from '../services/ai-models';
 import { parseShotsToShots, parseShotLines } from '../services/shot-parser';
+import { startVideoGeneration, resumeVideoTask, loadVideoTasks } from '../services/video-generation';
 
 const DEFAULT_SHOTS: Shot[] = [
   {
     id: '#001', projectId: '', scene: 1, type: '全景', angle: '平视',
     duration: '3.5s', desc: '咖啡馆全景，阳光透过玻璃，林晓端着咖啡走向镜头', status: 'done', img: '',
+    videoPrompt: '镜头缓慢推近林晓，0-3秒她抬头望向门口，3-6秒陈诺推门走入，林晓神情意外',
+    bgmPrompt: '轻钢琴，氛围舒缓',
+    soundEffect: '门铃声、脚步声',
   },
   {
     id: '#002', projectId: '', scene: 1, type: '中景', angle: '微俯',
@@ -57,6 +63,60 @@ const STATUS_COLOR: Record<string, { bg: string; text: string }> = {
 
 type ViewMode = 'grid' | 'list';
 const PAGE_SIZE = 12;
+
+/** 把 Blob 转成 dataURL（用于把 db:// 参考图传给文生图接口） */
+function blobToDataURL(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('图片读取失败'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+/** 把 db:// 引用解析为 dataURL，仅保留能读到的图 */
+async function resolveRefsToDataURLs(projectId: string, refs: string[]): Promise<string[]> {
+  const out: string[] = [];
+  for (const ref of refs) {
+    if (ref.startsWith('db://')) {
+      const blob = await loadProjectFile(projectId, ref.slice(5)).catch(() => undefined);
+      if (blob) out.push(await blobToDataURL(blob));
+    } else if (ref.startsWith('data:')) {
+      out.push(ref);
+    }
+  }
+  return out;
+}
+
+/**
+ * 从镜头文本（描述 + 视频提示词）识别出角色，并为每个角色配对一张参考图。
+ * 长名字优先匹配，最多 3 个角色（qwen-image 参考图上限）。
+ */
+function matchShotRefs(
+  shot: Shot,
+  characters: Character[],
+  max = 3
+): { name: string; ref: string }[] {
+  const text = `${shot.desc} ${shot.videoPrompt ?? ''}`;
+  const sorted = [...characters].sort((a, b) => b.name.trim().length - a.name.trim().length);
+  const pairs: { name: string; ref: string }[] = [];
+  for (const c of sorted) {
+    const name = c.name.trim();
+    const ref = (c.referenceImages ?? [])[0];
+    if (!name || !ref) continue;
+    if (!text.includes(name)) continue;
+    pairs.push({ name, ref });
+    if (pairs.length >= max) break;
+  }
+  return pairs;
+}
+
+/** 有参考图时，在提示词末尾标注图与角色的对应关系，保证形象一致 */
+function buildPromptWithRefs(prompt: string, pairs: { name: string; ref: string }[]): string {
+  if (pairs.length === 0) return prompt;
+  const mapping = pairs.map((p, i) => `图${i + 1}即「${p.name}」`).join('，');
+  return `${prompt}\n参考图中的人物形象必须保持一致：${mapping}。`;
+}
 
 /** 分镜缩略图：从 IndexedDB 加载图片（db:// 引用）或直接显示 dataURL/URL */
 const ShotThumbnail: React.FC<{ shot: Shot }> = ({ shot }) => {
@@ -111,8 +171,12 @@ const ShotThumbnail: React.FC<{ shot: Shot }> = ({ shot }) => {
 async function generateImagesInBackground(
   projectId: string,
   shots: Shot[],
+  imageModel: AIModelConfig | undefined,
+  characters: Character[],
   onImage: (shotId: string, img: string) => void
 ): Promise<void> {
+  if (!imageModel) return; // 没有可用的文生图模型时跳过图片生成
+  const model = imageModel;
   const limit = 2;
   let index = 0;
   async function worker(): Promise<void> {
@@ -120,9 +184,18 @@ async function generateImagesInBackground(
       const i = index++;
       const shot = shots[i];
       try {
-        const service = getAIServiceForPurpose('image');
-        const dataUrl = await service.generateImage({ prompt: shot.desc, size: '1024x1024' });
-        const blob = await (await fetch(dataUrl)).blob();
+        const service = getAIServiceForModel(model, 'image');
+        const pairs = matchShotRefs(shot, characters);
+        const referenceImages = await resolveRefsToDataURLs(
+          projectId,
+          pairs.map((p) => p.ref)
+        );
+        const dataUrl = await service.generateImage({
+          prompt: buildPromptWithRefs(shot.desc, pairs),
+          size: '1024x1024',
+          referenceImages,
+        });
+        const blob = dataURLToBlob(dataUrl);
         await saveProjectFile(projectId, shot.id, blob);
         onImage(shot.id, `db://${shot.id}`);
       } catch {
@@ -132,6 +205,37 @@ async function generateImagesInBackground(
   }
   await Promise.all(Array.from({ length: Math.min(limit, shots.length) }, () => worker()));
 }
+
+/** 镜头视频预览：从 IndexedDB 加载 db:// 引用 */
+const ShotVideo: React.FC<{ shot: Shot }> = ({ shot }) => {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setSrc(null);
+    if (!shot.videoUrl) return;
+    if (shot.videoUrl.startsWith('db://')) {
+      loadProjectFile(shot.projectId, shot.videoUrl.slice(5))
+        .then((blob) => {
+          if (alive && blob) setSrc(URL.createObjectURL(blob));
+        })
+        .catch(() => {});
+    } else {
+      setSrc(shot.videoUrl);
+    }
+    return () => {
+      alive = false;
+    };
+  }, [shot.videoUrl, shot.projectId]);
+
+  if (!src) return null;
+  return (
+    <video
+      src={src}
+      controls
+      style={{ width: '100%', borderRadius: 4, background: '#000', maxHeight: 240 }}
+    />
+  );
+};
 
 const Storyboard: React.FC = () => {
   const activeProjectId = useAppStore((s) => s.activeProjectId);
@@ -143,11 +247,27 @@ const Storyboard: React.FC = () => {
   const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
   const [editDescriptions, setEditDescriptions] = useState<Record<string, string>>({});
   const [generatingId, setGeneratingId] = useState<string | null>(null);
+  const [imageGeneratingId, setImageGeneratingId] = useState<string | null>(null);
+  const [videoTasks, setVideoTasks] = useState<VideoTask[]>([]);
   const [aiGeneratingAll, setAiGeneratingAll] = useState(false);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [lastGenerateMessage, setLastGenerateMessage] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = React.useRef<HTMLDivElement | null>(null);
+  const resumedVideoTasksRef = React.useRef<Set<string>>(new Set());
+  const charactersRef = React.useRef<Character[]>([]);
+
+  // 文生图模型：项目级手动选择（持久化），未选择时回退到全局默认
+  const imageModels = getEnabledImageModels();
+  const defaultImageModel = getModelForPurpose(loadModelSettings(), 'image');
+  const effectiveImageModelId =
+    project?.imageModelId && imageModels.some((m) => m.id === project.imageModelId)
+      ? project.imageModelId
+      : (defaultImageModel?.id ?? '');
+  const imageModel =
+    imageModels.find((m) => m.id === effectiveImageModelId) ?? defaultImageModel ?? imageModels[0];
+  const videoModel = getModelForPurpose(loadModelSettings(), 'video');
+  const videoAspectRatio = project?.orientation === 'horizontal' ? '16:9' : '9:16';
 
   // 已写好剧本的幕数（联动分镜生成的可用素材）
   const scriptReadyCount = episodes.filter((e) => e.content.trim()).length;
@@ -187,11 +307,50 @@ const Storyboard: React.FC = () => {
       setShots((prev) =>
         prev.map((s) => (s.id === shotId ? { ...s, desc: newDesc, status: 'done' } : s))
       );
+      // 生成描述后顺带生成该镜头的图片（调用当前选中的文生图模型）
+      void handleGenerateShotImage(shotId, newDesc);
     } catch (error) {
       console.error('分镜生成失败:', error);
       alert(error instanceof Error ? error.message : '分镜生成失败');
     } finally {
       setGeneratingId(null);
+    }
+  };
+
+  /** 给单个镜头生成/重新生成图片（调用当前选中的文生图模型） */
+  const handleGenerateShotImage = async (shotId: string, promptOverride?: string) => {
+    const shot = shots.find((s) => s.id === shotId);
+    if (!shot || !imageModel || imageGeneratingId === shotId) return;
+    const prompt = promptOverride ?? getDescription(shot);
+    setImageGeneratingId(shotId);
+    try {
+      setShots((prev) =>
+        prev.map((s) => (s.id === shotId ? { ...s, status: 'generating' as const } : s))
+      );
+      const service = getAIServiceForModel(imageModel, 'image');
+      const pairs = matchShotRefs(shot, charactersRef.current);
+      const referenceImages = await resolveRefsToDataURLs(
+        activeProjectId || '',
+        pairs.map((p) => p.ref)
+      );
+      const dataUrl = await service.generateImage({
+        prompt: buildPromptWithRefs(prompt, pairs),
+        size: '1024x1024',
+        referenceImages,
+      });
+      const blob = dataURLToBlob(dataUrl);
+      if (activeProjectId) await saveProjectFile(activeProjectId, shotId, blob);
+      setShots((prev) =>
+        prev.map((s) => (s.id === shotId ? { ...s, img: `db://${shotId}`, status: 'done' as const } : s))
+      );
+    } catch (error) {
+      console.error('分镜图片生成失败:', error);
+      alert(error instanceof Error ? error.message : '分镜图片生成失败');
+      setShots((prev) =>
+        prev.map((s) => (s.id === shotId ? { ...s, status: 'pending' as const } : s))
+      );
+    } finally {
+      setImageGeneratingId(null);
     }
   };
 
@@ -240,9 +399,15 @@ const Storyboard: React.FC = () => {
               return [...prev.filter((s) => !sceneIds.has(s.id)), ...parsed];
             });
             // 后台生成分镜图（真实文生图或模拟占位图），完成后逐个回填
-            void generateImagesInBackground(activeProjectId || '', parsed, (shotId, img) => {
-              setShots((prev) => prev.map((s) => (s.id === shotId ? { ...s, img } : s)));
-            });
+            void generateImagesInBackground(
+              activeProjectId || '',
+              parsed,
+              imageModel,
+              charactersRef.current,
+              (shotId, img) => {
+                setShots((prev) => prev.map((s) => (s.id === shotId ? { ...s, img } : s)));
+              }
+            );
           } else {
             setShots((prev) => prev.map((s) => (s.scene === scene ? { ...s, status: 'pending' as const } : s)));
           }
@@ -313,12 +478,49 @@ const Storyboard: React.FC = () => {
     </div>
   );
 
+  /** 给单个镜头发起图生视频任务（异步轮询） */
+  const handleGenerateVideo = async (shotId: string) => {
+    const shot = shots.find((s) => s.id === shotId);
+    if (!shot || !activeProjectId || !videoModel) return;
+    if (!shot.img) {
+      alert('该镜头还没有分镜图，请先生成图片');
+      return;
+    }
+    try {
+      // 角色参考图：按镜头中出现的角色匹配，每人最多 2 张，总上限 4 张
+      const shotText = `${shot.desc} ${shot.videoPrompt ?? ''}`;
+      const sortedChars = [...charactersRef.current].sort(
+        (a, b) => b.name.trim().length - a.name.trim().length
+      );
+      const refs: string[] = [];
+      for (const c of sortedChars) {
+        const name = c.name.trim();
+        if (!name || !shotText.includes(name)) continue;
+        for (const ref of (c.referenceImages ?? []).slice(0, 2)) refs.push(ref);
+        if (refs.length >= 4) break;
+      }
+      refs.length = Math.min(refs.length, 4);
+      await startVideoGeneration(activeProjectId, shot, videoModel, videoAspectRatio, refs);
+      setVideoTasks(loadVideoTasks(activeProjectId));
+    } catch (error) {
+      console.error('视频生成失败:', error);
+      alert(error instanceof Error ? error.message : '视频生成失败');
+    }
+  };
+
   useEffect(() => {
     if (!activeProjectId) return;
-    const data = loadModuleData<Shot[]>(activeProjectId, 'shots', DEFAULT_SHOTS);
+    const data = loadModuleData<Shot[]>(activeProjectId, 'shots', DEFAULT_SHOTS).map((s) => ({
+      // 镜头必须挂在当前项目下，否则分镜图存取用的不是同一个项目 key
+      ...s,
+      projectId: activeProjectId,
+    }));
     const epData = loadModuleData<Episode[]>(activeProjectId, 'episodes', []);
+    const charData = loadModuleData<Character[]>(activeProjectId, 'characters', []);
+    charactersRef.current = charData;
     setShots(data);
     setEpisodes(epData);
+    setVideoTasks(loadVideoTasks(activeProjectId));
     setLoaded(true);
   }, [activeProjectId]);
 
@@ -327,7 +529,41 @@ const Storyboard: React.FC = () => {
     saveModuleData(activeProjectId, 'shots', shots);
   }, [shots, activeProjectId, loaded]);
 
-  if (!activeProjectId || !loaded) {
+  // 视频任务轮询：刷新任务状态、把完成的视频回填到镜头、恢复未完成任务
+  useEffect(() => {
+    if (!activeProjectId || !loaded) return;
+    const refresh = () => {
+      const tasks = loadVideoTasks(activeProjectId);
+      setVideoTasks(tasks);
+      setShots((prev) => {
+        let changed = false;
+        const next = prev.map((s) => {
+          const done = tasks.find((t) => t.shotId === s.id && t.status === 'completed' && t.videoUrl);
+          if (done && s.videoUrl !== done.videoUrl) {
+            changed = true;
+            return { ...s, videoUrl: done.videoUrl };
+          }
+          return s;
+        });
+        return changed ? next : prev;
+      });
+      for (const t of tasks) {
+        if (
+          (t.status === 'processing' || t.status === 'pending') &&
+          videoModel &&
+          !resumedVideoTasksRef.current.has(t.id)
+        ) {
+          resumedVideoTasksRef.current.add(t.id);
+          resumeVideoTask(activeProjectId, t, videoModel, videoAspectRatio);
+        }
+      }
+    };
+    refresh();
+    const timer = setInterval(refresh, 6000);
+    return () => clearInterval(timer);
+  }, [activeProjectId, loaded, videoModel?.id, videoAspectRatio]);
+
+  if (!activeProjectId || !project || !loaded) {
     return (
       <div
         style={{
@@ -347,6 +583,9 @@ const Storyboard: React.FC = () => {
   }
 
   const selectedShot = shots.find((s) => s.id === selectedShotId) || null;
+  const selectedVideoTask = selectedShot
+    ? videoTasks.find((t) => t.shotId === selectedShot.id)
+    : undefined;
 
   const handleSelectShot = (id: string) => {
     setSelectedShotId((prev) => (prev === id ? null : id));
@@ -354,6 +593,14 @@ const Storyboard: React.FC = () => {
 
   const handleDescriptionChange = (shotId: string, value: string) => {
     setEditDescriptions((prev) => ({ ...prev, [shotId]: value }));
+  };
+
+  const handleShotFieldChange = (
+    shotId: string,
+    key: 'videoPrompt' | 'bgmPrompt' | 'soundEffect',
+    value: string
+  ) => {
+    setShots((prev) => prev.map((s) => (s.id === shotId ? { ...s, [key]: value } : s)));
   };
 
   const getDescription = (shot: Shot) => {
@@ -582,19 +829,51 @@ const Storyboard: React.FC = () => {
                 >
                   {shot.duration}
                 </span>
-                {(shot.status === 'pending' || shot.status === 'generating') && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {(shot.status === 'pending' || shot.status === 'generating') && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        handleGenerateShot(shot.id);
+                      }}
+                      disabled={generatingId === shot.id}
+                    >
+                      {generatingId === shot.id ? '生成中…' : '生成分镜'}
+                    </Button>
+                  )}
+                  <Button
+                    variant={shot.img ? 'secondary' : 'primary'}
+                    size="sm"
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      void handleGenerateShotImage(shot.id);
+                    }}
+                    disabled={imageGeneratingId === shot.id || !imageModel}
+                  >
+                    {imageGeneratingId === shot.id ? '图片生成中…' : shot.img ? '重生成图' : '生成图片'}
+                  </Button>
                   <Button
                     variant="secondary"
                     size="sm"
                     onClick={(e: React.MouseEvent) => {
                       e.stopPropagation();
-                      handleGenerateShot(shot.id);
+                      void handleGenerateVideo(shot.id);
                     }}
-                    disabled={generatingId === shot.id}
+                    disabled={
+                      !shot.img ||
+                      !videoModel ||
+                      videoTasks.some((t) => t.shotId === shot.id && (t.status === 'processing' || t.status === 'pending'))
+                    }
                   >
-                    {generatingId === shot.id ? '生成中…' : '生成分镜'}
+                    {videoTasks.some((t) => t.shotId === shot.id && (t.status === 'processing' || t.status === 'pending'))
+                      ? '视频生成中…'
+                      : shot.videoUrl
+                        ? '重生成视频'
+                        : '生成视频'}
                   </Button>
-                )}
+                </div>
               </div>
             </div>
           </div>
@@ -722,6 +1001,36 @@ const Storyboard: React.FC = () => {
                   {generatingId === shot.id ? '生成中…' : '生成分镜'}
                 </Button>
               )}
+              <Button
+                variant={shot.img ? 'secondary' : 'primary'}
+                size="sm"
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  void handleGenerateShotImage(shot.id);
+                }}
+                disabled={imageGeneratingId === shot.id || !imageModel}
+              >
+                {imageGeneratingId === shot.id ? '图片生成中…' : shot.img ? '重生成图' : '生成图片'}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  void handleGenerateVideo(shot.id);
+                }}
+                disabled={
+                  !shot.img ||
+                  !videoModel ||
+                  videoTasks.some((t) => t.shotId === shot.id && (t.status === 'processing' || t.status === 'pending'))
+                }
+              >
+                {videoTasks.some((t) => t.shotId === shot.id && (t.status === 'processing' || t.status === 'pending'))
+                  ? '视频生成中…'
+                  : shot.videoUrl
+                    ? '重生成视频'
+                    : '生成视频'}
+              </Button>
             </div>
           </div>
         );
@@ -940,14 +1249,158 @@ const Storyboard: React.FC = () => {
               boxSizing: 'border-box',
             }}
           />
+
           <div style={{ marginTop: 10 }}>
+            <div
+              style={{
+                fontSize: 11,
+                color: C.textMute,
+                fontFamily: 'Inter, sans-serif',
+                marginBottom: 6,
+              }}
+            >
+              视频提示词（图生视频）
+            </div>
+            <textarea
+              value={selectedShot.videoPrompt ?? ''}
+              onChange={(e) => handleShotFieldChange(selectedShot.id, 'videoPrompt', e.target.value)}
+              placeholder="镜头缓慢推近，0-3秒…3-6秒…"
+              style={{
+                width: '100%',
+                minHeight: 56,
+                resize: 'vertical',
+                background: C.inputBg,
+                border: `1px solid ${C.border}`,
+                borderRadius: 4,
+                padding: '8px 10px',
+                fontSize: 12,
+                fontFamily: 'Inter, sans-serif',
+                color: C.text,
+                lineHeight: '18px',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+
+          <div style={{ marginTop: 10, display: 'flex', gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: C.textMute,
+                  fontFamily: 'Inter, sans-serif',
+                  marginBottom: 6,
+                }}
+              >
+                配乐
+              </div>
+              <input
+                value={selectedShot.bgmPrompt ?? ''}
+                onChange={(e) => handleShotFieldChange(selectedShot.id, 'bgmPrompt', e.target.value)}
+                placeholder="轻钢琴，氛围舒缓"
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  background: C.inputBg,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 4,
+                  padding: '6px 8px',
+                  fontSize: 12,
+                  color: C.text,
+                  outline: 'none',
+                }}
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: C.textMute,
+                  fontFamily: 'Inter, sans-serif',
+                  marginBottom: 6,
+                }}
+              >
+                音效
+              </div>
+              <input
+                value={selectedShot.soundEffect ?? ''}
+                onChange={(e) => handleShotFieldChange(selectedShot.id, 'soundEffect', e.target.value)}
+                placeholder="门铃声、脚步声"
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  background: C.inputBg,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 4,
+                  padding: '6px 8px',
+                  fontSize: 12,
+                  color: C.text,
+                  outline: 'none',
+                }}
+              />
+            </div>
+          </div>
+
+          {selectedShot.videoUrl && (
+            <div style={{ marginTop: 10 }}>
+              <ShotVideo shot={selectedShot} />
+            </div>
+          )}
+
+          {selectedVideoTask?.status === 'failed' && selectedVideoTask.error && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: '8px 10px',
+                background: '#FEF2F2',
+                border: '1px solid #FCA5A5',
+                borderRadius: 4,
+                fontSize: 11,
+                color: '#DC2626',
+                fontFamily: 'Inter, sans-serif',
+              }}
+            >
+              {selectedVideoTask.error}
+            </div>
+          )}
+
+          <div style={{ marginTop: 10 }}>
+            <Button
+              variant="secondary"
+              style={{ width: '100%' }}
+              onClick={() => selectedShot && void handleGenerateVideo(selectedShot.id)}
+              disabled={
+                !selectedShot ||
+                !videoModel ||
+                !selectedShot.img ||
+                (selectedVideoTask?.status === 'processing' || selectedVideoTask?.status === 'pending')
+              }
+            >
+              {selectedVideoTask?.status === 'processing' || selectedVideoTask?.status === 'pending'
+                ? '视频生成中…'
+                : selectedShot.videoUrl
+                  ? '重新生成视频'
+                  : '生成视频'}
+            </Button>
+          </div>
+
+          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <Button
               variant="secondary"
               style={{ width: '100%' }}
               onClick={() => selectedShot && handleGenerateShot(selectedShot.id)}
               disabled={!selectedShot || generatingId === selectedShot?.id}
             >
-              {generatingId === selectedShot?.id ? '生成中…' : '重新生成'}
+              {generatingId === selectedShot?.id ? '生成中…' : '重新生成描述'}
+            </Button>
+            <Button
+              variant="secondary"
+              style={{ width: '100%' }}
+              onClick={() => selectedShot && void handleGenerateShotImage(selectedShot.id)}
+              disabled={!selectedShot || imageGeneratingId === selectedShot?.id || !imageModel}
+            >
+              {imageGeneratingId === selectedShot?.id ? '图片生成中…' : '重新生成图片'}
             </Button>
           </div>
         </div>
@@ -1024,6 +1477,39 @@ const Storyboard: React.FC = () => {
         </span>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* 文生图模型选择（按项目记忆） */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 11, color: C.textMute }}>文生图</span>
+            {imageModels.length > 0 ? (
+              <select
+                value={imageModel?.id ?? ''}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  if (activeProjectId) updateProject(activeProjectId, { imageModelId: id || undefined });
+                }}
+                style={{
+                  fontSize: 12,
+                  color: C.text,
+                  background: C.inputBg,
+                  border: `1px solid ${C.border}`,
+                  borderRadius: 4,
+                  padding: '5px 8px',
+                  outline: 'none',
+                  maxWidth: 180,
+                }}
+                title="生成分镜图使用的模型"
+              >
+                {imageModels.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span style={{ fontSize: 11, color: C.textMute }}>未启用</span>
+            )}
+          </div>
+
           {/* View toggle */}
           <div
             style={{

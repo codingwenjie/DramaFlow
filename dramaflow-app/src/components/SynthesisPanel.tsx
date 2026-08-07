@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { C } from '../constants';
-import { Button, StatusBadge, SectionLabel, Divider, ProgressBar } from './common';
+import { Button, SectionLabel, ProgressBar } from './common';
 import { useAppStore } from '../store/useAppStore';
 import { useProjectStore } from '../store/useProjectStore';
-import { loadModuleData, saveModuleData } from '../data/storage';
+import { loadModuleData, saveModuleData, loadProjectFile } from '../data/storage';
 import type { Shot, SynthesisConfig } from '../data/types';
 import { buildSynthesisJob } from '../services/synthesizer';
 import type { SynthesisResult } from '../../electron/synthesis';
@@ -15,10 +15,12 @@ interface Segment {
   shots: number;
   duration: number;
   status: string;
+  thumbShot?: Shot;
 }
 
 interface OutputSetting {
   label: string;
+  sub: string;
   value: string;
 }
 
@@ -64,6 +66,12 @@ const STEP_ORDER: { stage: string; label: string }[] = [
   { stage: 'concat', label: '最终封装' },
 ];
 
+const SEGMENT_STATUS: Record<string, { color: string; bg: string; border: string; label: string }> = {
+  ready: { color: '#16A34A', bg: '#ECFDF5', border: '#BBF7D0', label: '就绪' },
+  processing: { color: '#E69500', bg: '#FFF3D0', border: '#FDE68A', label: '处理中' },
+  pending: { color: '#9AA0B0', bg: '#EEF0F4', border: '#E4E7EE', label: '待处理' },
+};
+
 const Toggle: React.FC<{ enabled: boolean; onToggle: () => void }> = ({ enabled, onToggle }) => {
   return (
     <div
@@ -96,35 +104,55 @@ const Toggle: React.FC<{ enabled: boolean; onToggle: () => void }> = ({ enabled,
   );
 };
 
-const stepStatusIcon: Record<string, React.CSSProperties> = {
-  completed: {
-    width: 16,
-    height: 16,
-    borderRadius: '50%',
-    background: C.green,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 10,
-    color: '#FFFFFF',
-    fontWeight: 700,
-    flexShrink: 0,
-  },
-  loading: {
-    width: 16,
-    height: 16,
-    borderRadius: '50%',
-    border: `2px solid ${C.amber}`,
-    borderTopColor: 'transparent',
-    flexShrink: 0,
-  },
-  pending: {
-    width: 16,
-    height: 16,
-    borderRadius: '50%',
-    border: `2px solid ${C.border}`,
-    flexShrink: 0,
-  },
+/** 场次片段缩略图：从 IndexedDB 加载该幕第一个镜头的图片 */
+const SegmentThumb: React.FC<{ shot?: Shot }> = ({ shot }) => {
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setImgUrl(null);
+    if (!shot?.img) return;
+    if (shot.img.startsWith('db://')) {
+      loadProjectFile(shot.projectId, shot.img.slice(5))
+        .then((blob) => {
+          if (alive && blob) setImgUrl(URL.createObjectURL(blob));
+        })
+        .catch(() => {});
+    } else {
+      setImgUrl(shot.img);
+    }
+    return () => {
+      alive = false;
+    };
+  }, [shot?.img, shot?.projectId]);
+
+  return (
+    <div
+      style={{
+        width: 56,
+        height: 32,
+        background: C.inputBg,
+        borderRadius: 3,
+        overflow: 'hidden',
+        flexShrink: 0,
+        border: `1px solid ${C.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#C0C5D0',
+        fontSize: 14,
+      }}
+    >
+      {imgUrl ? (
+        <img
+          src={imgUrl}
+          alt=""
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        />
+      ) : (
+        '◫'
+      )}
+    </div>
+  );
 };
 
 const SynthesisPanel: React.FC = () => {
@@ -151,7 +179,10 @@ const SynthesisPanel: React.FC = () => {
   useEffect(() => {
     if (!activeProjectId) return;
     const data = loadModuleData<SynthesisConfig>(activeProjectId, 'synthesis', DEFAULT_CONFIG);
-    const shotData = loadModuleData<Shot[]>(activeProjectId, 'shots', []);
+    const shotData = loadModuleData<Shot[]>(activeProjectId, 'shots', []).map((s) => ({
+      ...s,
+      projectId: activeProjectId,
+    }));
     setConfig(data);
     setShots(shotData);
     setToggles([
@@ -243,10 +274,14 @@ const SynthesisPanel: React.FC = () => {
 
   const outputSettings: OutputSetting[] = config
     ? [
-        { label: '分辨率', value: config.resolution },
-        { label: '帧率', value: `${config.fps} fps` },
-        { label: '码率', value: config.bitrate },
-        { label: '格式', value: config.format },
+        {
+          label: '输出分辨率',
+          sub: project?.orientation === 'horizontal' ? '横屏 16:9' : '竖屏 9:16',
+          value: config.resolution,
+        },
+        { label: '帧率', sub: '标准', value: `${config.fps} fps` },
+        { label: '码率', sub: '高质量', value: config.bitrate },
+        { label: '格式', sub: '兼容性强', value: config.format },
       ]
     : [];
 
@@ -298,52 +333,86 @@ const SynthesisPanel: React.FC = () => {
             alignItems: 'center',
           }}
         >
-          {videoSrc ? (
-            <video
-              key={result?.outputPath}
-              src={videoSrc}
-              controls
-              style={{
-                height: 480,
-                maxWidth: '100%',
-                background: '#000',
-                borderRadius: 6,
-                objectFit: 'contain',
-              }}
-            />
-          ) : (
+          <div style={{ position: 'relative', borderRadius: 6, overflow: 'hidden' }}>
             <div
               style={{
-                width: 270,
-                height: 480,
-                background: '#000000',
-                borderRadius: 6,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 10,
-                position: 'relative',
-                overflow: 'hidden',
+                position: 'absolute',
+                top: 6,
+                left: 6,
+                background: 'rgba(0,0,0,0.5)',
+                padding: '1px 5px',
+                borderRadius: 2,
+                fontSize: 9,
+                color: '#FFFFFF',
+                fontFamily: "'JetBrains Mono', monospace",
+                zIndex: 2,
               }}
             >
+              PREVIEW
+            </div>
+            {videoSrc ? (
+              <video
+                key={result?.outputPath}
+                src={videoSrc}
+                controls
+                style={{
+                  height: 480,
+                  maxWidth: '100%',
+                  background: '#000',
+                  borderRadius: 6,
+                  objectFit: 'contain',
+                  display: 'block',
+                }}
+              />
+            ) : (
               <div
                 style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.9)',
+                  width: 270,
+                  height: 480,
+                  background: '#000000',
+                  borderRadius: 6,
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: 'default',
+                  gap: 10,
+                  position: 'relative',
+                  overflow: 'hidden',
                 }}
               >
-                <span style={{ fontSize: 22, color: C.text, marginLeft: 3 }}>▶</span>
+                <div
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: '50%',
+                    background: 'rgba(255,255,255,0.9)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'default',
+                  }}
+                >
+                  <span style={{ fontSize: 22, color: C.text, marginLeft: 3 }}>▶</span>
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                  {isComplete ? '点击播放预览成片' : '合成完成后在此预览'}
+                </div>
               </div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
-                {isComplete ? '点击播放预览成片' : '合成完成后在此预览'}
-              </div>
+            )}
+          </div>
+          {result?.duration != null && (
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 10,
+                color: C.textMute,
+                fontFamily: "'JetBrains Mono', monospace",
+              }}
+            >
+              总时长 {result.duration.toFixed(1)}s ·{' '}
+              {((result.size ?? 0) / 1024 / 1024) < 1
+                ? `${((result.size ?? 0) / 1024).toFixed(0)} KB`
+                : `${((result.size ?? 0) / 1024 / 1024).toFixed(1)} MB`}
             </div>
           )}
         </div>
@@ -382,58 +451,53 @@ const SynthesisPanel: React.FC = () => {
             ) : (
               segments.map((seg) => {
                 const isSelected = seg.id === selectedSegmentId;
+                const s = SEGMENT_STATUS[seg.status] || SEGMENT_STATUS.pending;
                 return (
                   <div
                     key={seg.id}
                     onClick={() => setSelectedSegmentId(seg.id)}
                     style={{
+                      background: C.card,
+                      border: `1px solid ${isSelected ? '#F5C842' : C.border}`,
+                      borderRadius: 5,
+                      padding: '11px 14px',
+                      marginBottom: 8,
                       display: 'flex',
-                      flexDirection: 'row',
+                      gap: 12,
                       alignItems: 'center',
-                      gap: 10,
-                      padding: '8px 10px',
-                      borderRadius: 6,
                       cursor: 'pointer',
-                      background: isSelected ? C.active : 'transparent',
-                      border: isSelected ? `1px solid ${C.amberLight}` : '1px solid transparent',
-                      transition: 'background 0.15s',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                     }}
                   >
-                    <div
+                    <SegmentThumb shot={seg.thumbShot} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                        <span style={{ fontSize: 12, color: C.text, fontWeight: 500, fontFamily: 'Inter, sans-serif' }}>
+                          {seg.name}
+                        </span>
+                        <span style={{ fontSize: 9, color: C.textMute, fontFamily: "'JetBrains Mono', monospace" }}>
+                          {seg.part}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, fontSize: 10, color: C.textSub, fontFamily: 'Inter, sans-serif' }}>
+                        <span>{seg.shots} 个镜头</span>
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{seg.duration.toFixed(1)}s</span>
+                      </div>
+                    </div>
+                    <span
                       style={{
-                        width: 80,
-                        height: 45,
-                        borderRadius: 4,
-                        background: C.tag,
-                        flexShrink: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
                         fontSize: 10,
-                        color: C.textMute,
+                        background: s.bg,
+                        color: s.color,
+                        border: `1px solid ${s.border}`,
+                        padding: '2px 8px',
+                        borderRadius: 3,
+                        fontFamily: "'JetBrains Mono', monospace",
+                        flexShrink: 0,
                       }}
                     >
-                      {seg.shots} 镜头
-                    </div>
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: C.text,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                      >
-                        {seg.name}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, fontSize: 11, color: C.textSub }}>
-                        <span>{seg.part}</span>
-                        <span>约 {seg.duration.toFixed(1)}s</span>
-                      </div>
-                    </div>
-                    <StatusBadge status={seg.status} />
+                      {s.label}
+                    </span>
                   </div>
                 );
               })
@@ -445,25 +509,34 @@ const SynthesisPanel: React.FC = () => {
       {/* ===== 右侧面板 ===== */}
       <div
         style={{
-          width: 260,
+          width: 272,
           flexShrink: 0,
           display: 'flex',
           flexDirection: 'column',
-          gap: 16,
+          gap: 12,
           overflow: 'auto',
         }}
       >
         {/* 输出设置 */}
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: 16 }}>
           <SectionLabel>输出设置</SectionLabel>
-          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ marginTop: 8 }}>
             {outputSettings.map((setting, idx) => (
-              <div key={idx}>
-                {idx > 0 && <Divider style={{ margin: '0 0 10px 0' }} />}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 12, color: C.textSub }}>{setting.label}</span>
-                  <span style={{ fontSize: 12, fontWeight: 500, color: C.text }}>{setting.value}</span>
+              <div
+                key={setting.label}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '7px 0',
+                  borderBottom: idx < outputSettings.length - 1 ? `1px solid ${C.inputBg}` : 'none',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 11, color: C.textSub }}>{setting.label}</div>
+                  <div style={{ fontSize: 9, color: C.textMute }}>{setting.sub}</div>
                 </div>
+                <div style={{ fontSize: 11, color: C.text, fontFamily: "'JetBrains Mono', monospace" }}>{setting.value}</div>
               </div>
             ))}
           </div>
@@ -481,87 +554,127 @@ const SynthesisPanel: React.FC = () => {
             ))}
           </div>
         </div>
-      </div>
 
-      {/* ===== 底部合成区域 ===== */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: C.card,
-          borderTop: `1px solid ${C.border}`,
-          padding: '12px 16px',
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 16,
-          zIndex: 10,
-        }}
-      >
-        {!isSynthesizing && !isComplete ? (
-          <>
-            <Button variant="primary" onClick={handleStartSynthesis} style={{ padding: '8px 24px', fontSize: 14, fontWeight: 600 }}>
-              开始合成
-            </Button>
-            {!hasDesktop && (
-              <span style={{ fontSize: 11, color: C.amber }}>本地合成需要桌面版（npm run dev）</span>
-            )}
-          </>
-        ) : isComplete && result ? (
-          <>
-            <Button variant="primary" onClick={handleDownload} style={{ padding: '8px 24px', fontSize: 14, fontWeight: 600 }}>
-              下载成品
-            </Button>
-            {result.duration != null && (
-              <span style={{ fontSize: 12, color: C.textSub }}>
-                时长 {result.duration.toFixed(1)}s · {(result.size ?? 0) / 1024 / 1024 < 1
-                  ? `${((result.size ?? 0) / 1024).toFixed(0)} KB`
-                  : `${((result.size ?? 0) / 1024 / 1024).toFixed(1)} MB`}
+        {/* 合成进度 */}
+        <div
+          style={{
+            background: C.card,
+            border: `1px solid ${C.border}`,
+            borderRadius: 8,
+            padding: 16,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <SectionLabel>合成进度</SectionLabel>
+          <div style={{ background: C.inputBg, border: `1px solid ${C.border}`, borderRadius: 5, padding: 12, marginTop: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: 11, color: C.textSub }}>总进度</span>
+              <span style={{ fontSize: 11, color: C.amber, fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>
+                {progress}%
               </span>
-            )}
-          </>
-        ) : (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: C.textSub }}>
-                <span>合成进度</span>
-                <span>{progress}%{stageMessage ? ` · ${stageMessage}` : ''}</span>
-              </div>
-              <ProgressBar percent={progress} />
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'row', gap: 14, alignItems: 'center' }}>
+            <ProgressBar percent={progress} />
+            {stageMessage && (
+              <div style={{ marginTop: 8, fontSize: 10, color: C.textMute }}>{stageMessage}</div>
+            )}
+            <div style={{ marginTop: 12 }}>
               {steps.map((step) => {
-                const iconStyle = stepStatusIcon[step.status];
                 const isCompleted = step.status === 'completed';
                 const isLoading = step.status === 'loading';
                 return (
-                  <div key={step.id} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                    <div style={iconStyle}>
-                      {isCompleted ? '✓' : ''}
-                    </div>
+                  <div key={step.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <div
+                      style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background: isCompleted ? C.green : isLoading ? C.amber : C.border,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span style={{ fontSize: 10, color: C.textSub, flex: 1 }}>{step.label}</span>
                     <span
                       style={{
                         fontSize: 10,
-                        color: isCompleted ? C.textSub : isLoading ? C.amber : C.textMute,
-                        whiteSpace: 'nowrap',
+                        color: isCompleted ? C.green : isLoading ? C.amber : C.textMute,
+                        fontFamily: "'JetBrains Mono', monospace",
                       }}
                     >
-                      {step.label}
+                      {isCompleted ? '100%' : isLoading ? '进行中' : '—'}
                     </span>
                   </div>
                 );
               })}
             </div>
           </div>
-        )}
-        {error && (
-          <div style={{ fontSize: 11, color: '#D64545', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {error}
-          </div>
-        )}
+
+          {error && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: '8px 10px',
+                background: '#FEF2F2',
+                border: '1px solid #FCA5A5',
+                borderRadius: 4,
+                fontSize: 11,
+                color: '#DC2626',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          {!isSynthesizing && !isComplete ? (
+            <>
+              <Button
+                variant="primary"
+                onClick={handleStartSynthesis}
+                style={{ width: '100%', marginTop: 12, padding: '10px', fontSize: 13, fontWeight: 700 }}
+              >
+                ▶ 开始合成
+              </Button>
+              {!hasDesktop && (
+                <div style={{ marginTop: 8, fontSize: 10, color: C.amber, textAlign: 'center' }}>
+                  本地合成需要桌面版（npm run dev）
+                </div>
+              )}
+            </>
+          ) : isComplete && result ? (
+            <>
+              <Button
+                variant="primary"
+                onClick={handleDownload}
+                style={{ width: '100%', marginTop: 12, padding: '10px', fontSize: 13, fontWeight: 700 }}
+              >
+                ⬇ 下载成品
+              </Button>
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: '8px 12px',
+                  background: C.greenBg,
+                  border: '1px solid #BBF7D0',
+                  borderRadius: 4,
+                  fontSize: 11,
+                  color: C.green,
+                  textAlign: 'center',
+                }}
+              >
+                ✓ 合成完成
+                {result.duration != null ? ` · 总时长 ${result.duration.toFixed(1)}s` : ''}
+              </div>
+            </>
+          ) : (
+            <Button
+              variant="secondary"
+              disabled
+              style={{ width: '100%', marginTop: 12, padding: '10px', fontSize: 13, fontWeight: 700 }}
+            >
+              合成中…
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -584,7 +697,12 @@ function useMemoSegments(shots: Shot[]): Segment[] {
         part: `片段 ${String(partIndex).padStart(2, '0')}`,
         shots: group.shots.length,
         duration: totalDuration,
-        status: 'done',
+        status: group.shots.every((s) => s.img)
+          ? 'ready'
+          : group.shots.some((s) => s.status === 'generating')
+            ? 'processing'
+            : 'pending',
+        thumbShot: group.shots[0],
       });
       partIndex += 1;
     }

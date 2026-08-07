@@ -1,4 +1,4 @@
-import { loadModuleData } from '../data/storage';
+import { loadModuleData, loadProjectFile } from '../data/storage';
 import type { DubbingLine, Shot, SynthesisConfig } from '../data/types';
 import type { SynthesisJobInput } from '../../electron/synthesis';
 
@@ -58,23 +58,57 @@ export async function buildSynthesisJob(
     });
   }
 
-  const job: SynthesisJobInput = {
-    projectId,
-    projectName,
-    shots: jobShots,
-    lines: assignedLines.map((l) => ({
+  const jobLines: SynthesisJobInput['lines'] = [];
+  for (const l of assignedLines) {
+    const audio = await loadLineAudioBase64(projectId, l);
+    jobLines.push({
       id: l.id,
       scene: l.scene,
       character: l.character,
       text: l.text,
       speed: l.speed,
       volume: l.volume,
-    })),
+      ...(audio ? { audioBase64: audio.base64, audioFormat: audio.format } : {}),
+    });
+  }
+
+  const job: SynthesisJobInput = {
+    projectId,
+    projectName,
+    shots: jobShots,
+    lines: jobLines,
     fps: config.fps || 30,
     width,
     height,
   };
   return { job, shotCount: jobShots.length };
+}
+
+/** 加载配音模块生成的音频（db:// 或 dataURL），转成 base64 供主进程使用 */
+async function loadLineAudioBase64(
+  projectId: string,
+  line: DubbingLine
+): Promise<{ base64: string; format: string } | null> {
+  if (!line.audioUrl) return null;
+  let blob: Blob | null = null;
+  try {
+    if (line.audioUrl.startsWith('db://')) {
+      blob = (await loadProjectFile(projectId, line.audioUrl.slice(5))) ?? null;
+    } else if (line.audioUrl.startsWith('data:')) {
+      blob = await (await fetch(line.audioUrl)).blob();
+    }
+  } catch {
+    blob = null;
+  }
+  if (!blob) return null;
+
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return { base64: btoa(binary), format: blob.type || 'audio/wav' };
 }
 
 /** 生成单张分镜图（竖屏 1080×1920 / 横屏 1920×1080），返回 JPEG dataURL */

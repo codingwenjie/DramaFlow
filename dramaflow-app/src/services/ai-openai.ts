@@ -8,59 +8,37 @@ import {
   AIGenerateImageParams,
 } from './ai';
 import { AIModelConfig, AIModelPurpose } from '../data/types';
+import { requestAIJSON, normalizeError } from './ai-http';
+import { getImageAdapter, getTTSAdapter } from './provider-adapters';
 
 interface ChatMessage {
   role: 'system' | 'user';
   content: string;
 }
 
-export const REQUEST_TIMEOUT_MS = 60_000;
-const IMAGE_TIMEOUT_MS = 120_000;
+const CHAT_PURPOSES = ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic'];
 
-/** 统一错误消息：按 HTTP 状态码映射为可读的中文提示 */
-function mapHttpError(status: number): string {
-  switch (status) {
-    case 400:
-      return '请求参数错误，请检查模型名（model）是否被服务商支持';
-    case 401:
-    case 403:
-      return 'API Key 无效或无权限，请检查模型配置';
-    case 404:
-      return '接口地址不存在，请检查 Base URL 是否填写正确';
-    case 429:
-      return '请求过于频繁或额度不足，请稍后重试';
-    case 500:
-    case 502:
-    case 503:
-      return '模型服务暂时不可用，请稍后重试';
-    default:
-      return `请求失败（HTTP ${status}）`;
+/** 判断某行是否为 AI 常见的开场引导句（“好的，以下是林薇的人设：”等） */
+function isFillerLead(line: string): boolean {
+  if (!line || line.length > 40) return false;
+  if (/[：:，,。!！]$/.test(line)) {
+    return /^(好的|好的，|好的！|以下是|下面|这是|为你|我来|你好|您好|根据你的|根据您|关于|人设如下|角色设定如下|人物设定如下)/.test(line);
   }
+  return line.length <= 12 && /^(好的|以下是|下面|这是|为你|我来|你好|您好|根据|关于)/.test(line);
 }
 
-function normalizeError(err: unknown): Error {
-  if (err instanceof Error) {
-    if (err.name === 'AbortError') {
-      return new Error('请求超时（60 秒），请检查网络或稍后重试');
-    }
-    if (/Failed to fetch|NetworkError|fetch failed/i.test(err.message)) {
-      return new Error('网络连接失败，请检查网络或 API 地址');
-    }
-    return err;
-  }
-  return new Error(String(err));
+/** 判断某行是否为 AI 常见的结尾客套/总结句（“以上就是林薇的人设”等） */
+function isFillerTail(line: string): boolean {
+  if (!line || line.length > 40) return false;
+  return /^(以上|以上就是|希望|如果|如有|这样|祝|仅供参考|内容仅供参考|若有|如果需要|可以根据|总的来说|总之|请根据)/.test(line);
 }
 
-/**
- * AI 请求统一出口：
- * - 开发环境：走 Vite 本地代理（/__dramaflow-ai-proxy），绕开服务商 CORS 限制
- * - 生产环境：浏览器直连（依赖服务商允许跨域；百炼等需另行部署服务端代理）
- */
-function fetchAI(url: string, init: RequestInit): Promise<Response> {
-  if (import.meta.env.DEV) {
-    return fetch(`/__dramaflow-ai-proxy?url=${encodeURIComponent(url)}`, init);
-  }
-  return fetch(url, init);
+/** 清理 AI 人设输出：去掉开头引导句与结尾客套句，只保留正文 */
+function cleanCharacterDescription(text: string): string {
+  const lines = text.split('\n');
+  while (lines.length && isFillerLead(lines[0].trim())) lines.shift();
+  while (lines.length && isFillerTail(lines[lines.length - 1].trim())) lines.pop();
+  return lines.join('\n').trim();
 }
 
 /** 核心 Chat Completions 调用：带超时与统一错误处理 */
@@ -70,28 +48,21 @@ async function chatCompletion(
   userPrompt: string,
   maxTokens?: number
 ): Promise<string> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const url = `${config.baseUrl.replace(/\/+$/, '')}/chat/completions`;
+  if (import.meta.env.DEV) {
+    console.log('[DramaFlow AI 请求]', {
+      model: config.model,
+      baseUrl: config.baseUrl,
+      system: systemPrompt,
+      user: userPrompt,
+      temperature: config.temperature ?? 0.7,
+      max_tokens: maxTokens ?? config.maxTokens ?? 2048,
+    });
+  }
   try {
-    const url = `${config.baseUrl.replace(/\/+$/, '')}/chat/completions`;
-    // 开发调试日志：打印请求入参（不包含 API Key）
-    if (import.meta.env.DEV) {
-      console.log('[DramaFlow AI 请求]', {
-        model: config.model,
-        baseUrl: config.baseUrl,
-        system: systemPrompt,
-        user: userPrompt,
-        temperature: config.temperature ?? 0.7,
-        max_tokens: maxTokens ?? config.maxTokens ?? 2048,
-      });
-    }
-    const res = await fetchAI(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
+    const data = await requestAIJSON(
+      url,
+      {
         model: config.model,
         messages: [
           { role: 'system', content: systemPrompt },
@@ -99,19 +70,10 @@ async function chatCompletion(
         ] as ChatMessage[],
         temperature: config.temperature ?? 0.7,
         max_tokens: maxTokens ?? config.maxTokens ?? 2048,
-      }),
-      signal: controller.signal,
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      const detail = res.status === 404 ? `\n实际请求地址：${url}` : body ? `（${body.slice(0, 120)}）` : '';
-      if (import.meta.env.DEV) {
-        console.log('[DramaFlow AI 错误]', `${mapHttpError(res.status)}${detail}`);
-      }
-      throw new Error(`${mapHttpError(res.status)}${detail}`);
-    }
-    const data = (await res.json()) as { choices: { message: { content: string } }[] };
-    const content = data.choices[0]?.message?.content?.trim() ?? '';
+      },
+      config
+    );
+    const content = data.choices?.[0]?.message?.content?.trim() ?? '';
     if (import.meta.env.DEV) {
       console.log('[DramaFlow AI 响应]', { model: config.model, content });
     }
@@ -122,8 +84,6 @@ async function chatCompletion(
       console.log('[DramaFlow AI 错误]', normalized.message);
     }
     throw normalized;
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -142,10 +102,16 @@ export async function testModelConnection(config: AIModelConfig): Promise<{
   const isImageOnly =
     config.purposes.includes('image') &&
     !config.purposes.some((p) => CHAT_PURPOSES.includes(p));
+  const isTTSOnly =
+    config.purposes.includes('dubbing') &&
+    !config.purposes.some((p) => CHAT_PURPOSES.includes(p)) &&
+    !config.purposes.includes('image');
   const start = Date.now();
   try {
     if (isImageOnly) {
       await requestImage(config, '一张纯色的测试图片', '1024x1024');
+    } else if (isTTSOnly) {
+      await requestTTS(config, '你好，这是一段配音连通性测试。');
     } else {
       await chatCompletion(config, '你是一个连接测试助手。', '请只回复两个字：正常', 4);
     }
@@ -155,172 +121,39 @@ export async function testModelConnection(config: AIModelConfig): Promise<{
   }
 }
 
-const CHAT_PURPOSES = ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic'];
-
-/**
- * 把 DashScope 相关的 Base URL 归一化为原生 API 根地址：
- * - https://xxx/compatible-mode/v1  → https://xxx/api/v1
- * - https://xxx/api/v1              → 保持原样
- * - https://xxx/v1                  → https://xxx/api/v1
- */
-function normalizeDashScopeBaseUrl(baseUrl: string): string {
-  const trimmed = baseUrl.replace(/\/+$/, '');
-  if (/\/compatible-mode\/v1$/i.test(trimmed)) {
-    return trimmed.replace(/\/compatible-mode\/v1$/i, '/api/v1');
-  }
-  if (/\/v1$/i.test(trimmed)) {
-    return trimmed.replace(/\/v1$/i, '/api/v1');
-  }
-  return trimmed;
-}
-
-/**
- * 通义万相 Qwen-Image：走阿里云百炼原生 multimodal-generation 接口。
- * 请求返回的图片 URL 有效期约 24 小时，因此下载后转成 dataURL 再入库。
- */
-async function requestQwenImage(
-  config: AIModelConfig,
-  prompt: string,
-  size: string
-): Promise<string> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
-  try {
-    const url = `${normalizeDashScopeBaseUrl(config.baseUrl)}/services/aigc/multimodal-generation/generation`;
-    if (import.meta.env.DEV) {
-      console.log('[DramaFlow AI 图片请求]', {
-        model: config.model,
-        baseUrl: config.baseUrl,
-        endpoint: url,
-        prompt,
-        size: size.replace(/x/g, '*'),
-        parameters: { prompt_extend: false, n: 1 },
-      });
-    }
-    const res = await fetchAI(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.model,
-        input: {
-          messages: [{ role: 'user', content: [{ text: prompt }] }],
-        },
-        parameters: {
-          prompt_extend: false,
-          n: 1,
-          size: size.replace(/x/g, '*'),
-        },
-      }),
-      signal: controller.signal,
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      const detail = res.status === 404 ? `\n实际请求地址：${url}` : body ? `（${body.slice(0, 120)}）` : '';
-      if (import.meta.env.DEV) {
-        console.log('[DramaFlow AI 图片错误]', `${mapHttpError(res.status)}${detail}`);
-      }
-      throw new Error(`${mapHttpError(res.status)}${detail}`);
-    }
-    const data = (await res.json()) as {
-      output?: {
-        choices?: { message?: { content?: { type?: string; image?: string }[] } }[];
-      };
-    };
-    const imageUrl = data.output?.choices?.[0]?.message?.content?.find((c) => c.image)?.image;
-    if (!imageUrl) {
-      throw new Error('图像接口未返回有效数据');
-    }
-    if (import.meta.env.DEV) {
-      console.log('[DramaFlow AI 图片响应]', { model: config.model, imageUrl });
-    }
-    const imgRes = await fetch(imageUrl);
-    if (!imgRes.ok) {
-      throw new Error(`图片下载失败（HTTP ${imgRes.status}）`);
-    }
-    const blob = await imgRes.blob();
-    return await blobToDataURL(blob);
-  } catch (err) {
-    const normalized = normalizeError(err);
-    if (import.meta.env.DEV) {
-      console.log('[DramaFlow AI 图片错误]', normalized.message);
-    }
-    throw normalized;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-/** 文生图（OpenAI 兼容 /images/generations）：返回 dataURL */
+/** 文生图统一入口：按模型配置匹配适配器，返回 dataURL */
 export async function requestImage(
   config: AIModelConfig,
   prompt: string,
-  size = '1024x1024'
+  size = '1024x1024',
+  referenceImages?: string[]
 ): Promise<string> {
-  // 通义万相 Qwen-Image 系列：阿里云百炼实例上没有 OpenAI 兼容图片接口，走原生接口
-  if (config.provider === 'dashscope' && /^qwen-image/i.test(config.model)) {
-    return requestQwenImage(config, prompt, size);
-  }
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), IMAGE_TIMEOUT_MS);
   try {
-    const url = `${config.baseUrl.replace(/\/+$/, '')}/images/generations`;
-    if (import.meta.env.DEV) {
-      console.log('[DramaFlow AI 图片请求]', { model: config.model, baseUrl: config.baseUrl, prompt, size });
-    }
-    const res = await fetchAI(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: config.model,
-        prompt,
-        n: 1,
-        // 阿里云百炼兼容接口使用 `1024*1024` 格式，OpenAI 使用 `1024x1024`
-        size: config.provider === 'dashscope' ? size.replace(/x/g, '*') : size,
-        response_format: 'b64_json',
-      }),
-      signal: controller.signal,
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => '');
-      const detail = res.status === 404 ? `\n实际请求地址：${url}` : body ? `（${body.slice(0, 120)}）` : '';
-      throw new Error(`${mapHttpError(res.status)}${detail}`);
-    }
-    const data = (await res.json()) as { data?: { b64_json?: string; url?: string }[] };
-    const item = data.data?.[0];
-    if (item?.b64_json) {
-      return `data:image/png;base64,${item.b64_json}`;
-    }
-    if (item?.url) {
-      const imgRes = await fetch(item.url);
-      const blob = await imgRes.blob();
-      return await blobToDataURL(blob);
-    }
-    throw new Error('图像接口未返回有效数据');
+    return await getImageAdapter(config).generate(config, prompt, size, referenceImages);
   } catch (err) {
     const normalized = normalizeError(err);
     if (import.meta.env.DEV) {
       console.log('[DramaFlow AI 图片错误]', normalized.message);
     }
     throw normalized;
-  } finally {
-    clearTimeout(timer);
   }
 }
 
-function blobToDataURL(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error('图片读取失败'));
-    reader.readAsDataURL(blob);
-  });
+/** 语音合成统一入口：按模型配置匹配适配器，返回音频 dataURL */
+export async function requestTTS(
+  config: AIModelConfig,
+  text: string,
+  opts: { voice?: string; speed?: number; emotion?: string } = {}
+): Promise<string> {
+  try {
+    return await getTTSAdapter(config).synthesize(config, text, opts);
+  } catch (err) {
+    const normalized = normalizeError(err);
+    if (import.meta.env.DEV) {
+      console.log('[DramaFlow AI 配音错误]', normalized.message);
+    }
+    throw normalized;
+  }
 }
 
 export function createOpenAIService(config: AIModelConfig, purpose: AIModelPurpose): AIService {
@@ -350,9 +183,10 @@ export function createOpenAIService(config: AIModelConfig, purpose: AIModelPurpo
         config,
         '你是一位专业分镜师，擅长将剧本转化为具体的镜头语言描述。' +
           '你必须严格按照以下格式每行输出一个镜头，不要输出序号、编号或任何解释：\n' +
-          '镜头类型|拍摄角度|时长秒|镜头描述',
+          '镜头类型|拍摄角度|时长秒|镜头描述|视频提示词|配乐风格|音效',
         `请根据以下剧本内容，为「${_params.scene}」场景拆分镜头。\n` +
-          `每行一个镜头，格式示例：全景|平视|3.5|咖啡馆全景，阳光透过玻璃，林晓端着咖啡走向镜头\n` +
+          `每行一个镜头，格式示例：全景|平视|3.5|咖啡馆全景，阳光透过玻璃，林晓端着咖啡走向镜头|镜头缓慢推近林晓，0-3秒她抬头望向门口，3-6秒陈诺推门走入，林晓神情意外|轻钢琴，氛围舒缓|门铃声、脚步声\n` +
+          `字段要求：视频提示词写动态画面与运镜，用「0-3秒」「3-6秒」等分段描述动作变化；配乐风格一句话；音效简短列出关键词。\n` +
           `目标镜头数：${_params.sceneCount ?? 6}（按剧情需要可增减，尽量接近）\n\n` +
           `${_params.scriptContent}`
       );
@@ -360,20 +194,29 @@ export function createOpenAIService(config: AIModelConfig, purpose: AIModelPurpo
     },
 
     generateDubbing: async (_params: AIDubbingParams): Promise<string> => {
-      // OpenAI 本身没有 TTS 的直接音频 URL 返回，这里返回占位符
-      // 实际接入时应调用 /audio/speech 并返回 blob URL
-      return 'openai-tts-mock-url';
+      return requestTTS(config, _params.text, {
+        voice: _params.voice ?? _params.character,
+        speed: _params.speed,
+        emotion: _params.emotion,
+      });
     },
 
     generateCharacter: async (_params: AIGenerateCharacterParams): Promise<string> => {
-      return chatCompletion(config,
-        '你是一位人物设定专家，擅长为短剧角色创作立体丰满的人设。',
-        `请为短剧角色「${_params.name}」创作人设。角色定位：${_params.role}。题材：${_params.genre || '现代都市'}。`
+      const raw = await chatCompletion(
+        config,
+        '你是一位人物设定专家，擅长为短剧角色创作立体丰满的人设。' +
+          '输出请使用简洁的 Markdown 格式：' +
+          '「## 角色定位」「## 性格特征」（要点列表）、「## 背景故事」「## 人物弧光」。' +
+          '严禁输出开场白（如“好的”“以下是…”）和结尾客套（如“以上就是”“希望有帮助”）以及任何与人物无关的解释。',
+        `请为短剧角色「${_params.name}」创作人设。角色定位：${_params.role}。题材：${_params.genre || '现代都市'}。\n` +
+          '格式要求：使用 Markdown 标题与列表，直接输出人设正文，不要输出任何开头和结尾的多余内容。'
       );
+      return cleanCharacterDescription(raw);
     },
 
     generateSuggestions: async (_params: AIGenerateSuggestionParams): Promise<string[]> => {
-      const text = await chatCompletion(config,
+      const text = await chatCompletion(
+        config,
         '你是一位短剧创作顾问，擅长给出具体、可执行的改进建议。',
         `请针对以下${_params.type === 'script' ? '剧本' : _params.type === 'character' ? '角色' : '分镜'}内容给出 3-5 条优化建议：\n\n${_params.context}`
       );
@@ -381,14 +224,15 @@ export function createOpenAIService(config: AIModelConfig, purpose: AIModelPurpo
     },
 
     polishScript: async (content: string, _instruction?: string): Promise<string> => {
-      return chatCompletion(config,
+      return chatCompletion(
+        config,
         '你是一位资深剧本编辑，擅长优化台词节奏、增强戏剧冲突。',
         `请根据以下要求润色剧本：${_instruction || '优化表达，增强戏剧张力'}\n\n${content}`
       );
     },
 
     generateImage: async (_params: AIGenerateImageParams): Promise<string> => {
-      return requestImage(config, _params.prompt, _params.size);
+      return requestImage(config, _params.prompt, _params.size, _params.referenceImages);
     },
   };
 }
