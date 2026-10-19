@@ -2,12 +2,32 @@ import type { AIModelConfig } from '../data/types';
 
 export interface VideoGenParams {
   prompt: string;
-  /** 参考图：dataURL（本地图）或 http(s) URL */
-  imageUrl: string;
+  /** 参考图：dataURL（本地图）或 http(s) URL；文生视频模型可不传 */
+  imageUrl?: string;
   /** 角色参考图（多参考图厂商使用，dataURL） */
   referenceImages?: string[];
   duration?: number;
   aspectRatio?: string;
+}
+
+/** 是否为文生视频（t2v）模型：通义万相 t2v 系列不需要分镜图作为输入 */
+export function isT2VVideoModel(model: { provider: string; model?: string }): boolean {
+  return model.provider === 'dashscope' && /t2v/i.test(model.model ?? '');
+}
+
+/** 是否为万相全能视频模型（wan3.0-video）：支持文生视频，也支持首帧/参考生视频 */
+export function isOmniWanModel(model: { provider: string; model?: string }): boolean {
+  return model.provider === 'dashscope' && /wan3\.0/i.test(model.model ?? '');
+}
+
+/** 新一代 dashscope 视频统一格式（media.first_frame + resolution/duration）：wan3.0、happyhorse 等 */
+export function isNewDashScopeVideoFormat(model: { provider: string; model?: string }): boolean {
+  return model.provider === 'dashscope' && /wan3\.0|happyhorse/i.test(model.model ?? '');
+}
+
+/** 该模型是否允许纯文本（无分镜图）生成视频 */
+export function supportsTextOnlyVideo(model: { provider: string; model?: string }): boolean {
+  return isT2VVideoModel(model) || isOmniWanModel(model);
 }
 
 export interface ProviderRequest {
@@ -20,6 +40,8 @@ export interface ProviderRequest {
 export interface VideoProviderAdapter {
   provider: string;
   buildGenerateRequest(config: AIModelConfig, params: VideoGenParams): ProviderRequest;
+  /** 连接测试请求：查询一个不存在的任务，验证 Key/Base URL 是否有效（不实际创建任务） */
+  buildTestRequest?(config: AIModelConfig): ProviderRequest;
   parseGenerateResponse(json: any): {
     isAsync: boolean;
     taskId?: string;
@@ -39,6 +61,9 @@ class KlingVideoAdapter implements VideoProviderAdapter {
   provider = 'kling';
 
   buildGenerateRequest(config: AIModelConfig, params: VideoGenParams): ProviderRequest {
+    if (!params.imageUrl) {
+      throw new Error('可灵图生视频需要分镜图作为输入');
+    }
     const url = `${config.baseUrl.replace(/\/+$/, '')}/v1/videos/image2video`;
     return {
       url,
@@ -78,6 +103,10 @@ class KlingVideoAdapter implements VideoProviderAdapter {
     };
   }
 
+  buildTestRequest(config: AIModelConfig): ProviderRequest {
+    return this.buildPollRequest(config, '__connection_test__');
+  }
+
   parsePollResponse(json: any) {
     if (json.code !== 0) {
       return { status: 'failed' as const, error: json.message || '可灵任务查询失败' };
@@ -98,6 +127,9 @@ class VolcengineVideoAdapter implements VideoProviderAdapter {
   provider = 'volcengine';
 
   buildGenerateRequest(config: AIModelConfig, params: VideoGenParams): ProviderRequest {
+    if (!params.imageUrl) {
+      throw new Error('火山 Seedance 图生视频需要分镜图作为输入');
+    }
     const url = `${config.baseUrl.replace(/\/+$/, '')}/contents/generations/tasks`;
     return {
       url,
@@ -142,6 +174,10 @@ class VolcengineVideoAdapter implements VideoProviderAdapter {
     };
   }
 
+  buildTestRequest(config: AIModelConfig): ProviderRequest {
+    return this.buildPollRequest(config, '__connection_test__');
+  }
+
   parsePollResponse(json: any) {
     const status = json.status;
     if (status === 'succeeded') {
@@ -157,22 +193,94 @@ class VolcengineVideoAdapter implements VideoProviderAdapter {
   }
 }
 
-/** 通义万相 Wan：基于首帧生成视频（异步任务，轮询任务状态） */
+/** 通义万相 Wan：图生视频（i2v）与文生视频（t2v），均异步任务轮询 */
 class DashScopeWanVideoAdapter implements VideoProviderAdapter {
   provider = 'dashscope';
 
   buildGenerateRequest(config: AIModelConfig, params: VideoGenParams): ProviderRequest {
     const base = normalizeDashScopeBaseUrl(config.baseUrl);
+    const url = `${base}/services/aigc/video-generation/video-synthesis`;
+    const headers = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${config.apiKey}`,
+      'X-DashScope-Async': 'enable',
+    };
+    const model = config.model || 'wanx2.1-i2v-turbo';
+
+    // 新一代万相/happyhorse 统一格式：带分镜图走首帧生视频（media.first_frame），无图走纯文生视频
+    if (isNewDashScopeVideoFormat(config)) {
+      const isWan3 = /wan3\.0/i.test(model);
+      const isT2v = /t2v/i.test(model);
+      const isR2V = /r2v/i.test(model);
+      const needImage = !isWan3 && !isT2v;
+      if (needImage && !params.imageUrl && !(params.referenceImages?.length)) {
+        throw new Error('该模型需要分镜图作为输入');
+      }
+      // r2v（参考生视频）要求媒体类型为 reference_image；i2v/wan3.0 用 first_frame 首帧
+      const mediaType = isR2V ? 'reference_image' : 'first_frame';
+      const media: Array<{ type: string; url: string }> = [];
+      if (params.imageUrl) {
+        media.push({ type: mediaType, url: params.imageUrl });
+      }
+      // r2v 额外携带角色参考图（提升角色一致性）；i2v 首帧与参考图类型互斥，不混用
+      if (isR2V) {
+        for (const ref of params.referenceImages ?? []) {
+          media.push({ type: 'reference_image', url: ref });
+        }
+      }
+      const input: Record<string, unknown> = { prompt: params.prompt };
+      if (media.length) input.media = media;
+      const parameters: Record<string, unknown> = {
+        resolution: '720P',
+        ...(isWan3 || isT2v
+          ? { ratio: params.aspectRatio || (isWan3 ? 'adaptive' : '16:9') }
+          : {}),
+        ...(isWan3 ? { prompt_extend: true, watermark: false } : {}),
+        duration: params.duration ?? 5,
+      };
+      return {
+        url,
+        method: 'POST',
+        headers,
+        body: {
+          model,
+          input,
+          parameters,
+        },
+      };
+    }
+
+    // 文生视频（wan2.7-t2v 系列）：纯文本输入，不带 img_url
+    if (isT2VVideoModel(config)) {
+      return {
+        url,
+        method: 'POST',
+        headers,
+        body: {
+          model: config.model || 'wan2.7-t2v-2026-06-12',
+          input: {
+            prompt: params.prompt,
+          },
+          parameters: {
+            resolution: '720P',
+            ratio: params.aspectRatio || '16:9',
+            prompt_extend: true,
+            watermark: false,
+            duration: params.duration ?? 5,
+          },
+        },
+      };
+    }
+
+    if (!params.imageUrl) {
+      throw new Error('通义万相图生视频需要分镜图作为输入');
+    }
     return {
       url: `${base}/services/aigc/video-generation/video-synthesis`,
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
-        'X-DashScope-Async': 'enable',
-      },
+      headers,
       body: {
-        model: config.model || 'wanx2.1-i2v-turbo',
+        model,
         input: {
           prompt: params.prompt,
           img_url: params.imageUrl,
@@ -205,6 +313,10 @@ class DashScopeWanVideoAdapter implements VideoProviderAdapter {
     };
   }
 
+  buildTestRequest(config: AIModelConfig): ProviderRequest {
+    return this.buildPollRequest(config, '__connection_test__');
+  }
+
   parsePollResponse(json: any) {
     const status = json.output?.task_status;
     if (status === 'SUCCEEDED') {
@@ -217,15 +329,21 @@ class DashScopeWanVideoAdapter implements VideoProviderAdapter {
   }
 }
 
-function normalizeDashScopeBaseUrl(baseUrl: string): string {
-  const trimmed = baseUrl.replace(/\/+$/, '');
+export function normalizeDashScopeBaseUrl(baseUrl: string): string {
+  let trimmed = baseUrl.replace(/\/+$/, '');
+  // 兼容用户直接粘贴完整接口地址（含 /services/aigc/video-generation/video-synthesis 尾巴）
+  trimmed = trimmed.replace(/\/services\/aigc\/video-generation\/video-synthesis$/i, '');
   if (/\/compatible-mode\/v1$/i.test(trimmed)) {
     return trimmed.replace(/\/compatible-mode\/v1$/i, '/api/v1');
+  }
+  if (/\/api\/v1$/i.test(trimmed)) {
+    return trimmed; // 已是 DashScope 原生地址，保持原样，避免重复拼成 /api/api/v1
   }
   if (/\/v1$/i.test(trimmed)) {
     return trimmed.replace(/\/v1$/i, '/api/v1');
   }
-  return trimmed;
+  // 裸域名等未带版本路径的输入，统一补全 DashScope 原生 API 前缀
+  return `${trimmed}/api/v1`;
 }
 
 export function getVideoAdapter(provider: string): VideoProviderAdapter {

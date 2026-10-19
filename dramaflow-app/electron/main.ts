@@ -214,6 +214,41 @@ app.whenReady().then(() => {
     return filePath
   })
 
+  ipcMain.handle('file:save-text', async (event, payload: { defaultName: string; content: string }) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const options: Electron.SaveDialogOptions = {
+      title: '保存项目备份',
+      defaultPath: payload.defaultName,
+      filters: [{ name: 'DramaFlow 项目备份', extensions: ['json'] }],
+    }
+    const { canceled, filePath } = win
+      ? await dialog.showSaveDialog(win, options)
+      : await dialog.showSaveDialog(options)
+    if (canceled || !filePath) return null
+    fs.writeFileSync(filePath, payload.content, 'utf-8')
+    return filePath
+  })
+
+  ipcMain.handle(
+    'file:open-text',
+    async (event, filters?: { name: string; extensions: string[] }[]) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      const options: Electron.OpenDialogOptions = {
+        title: '选择项目备份文件',
+        filters: filters?.length
+          ? filters
+          : [{ name: 'DramaFlow 项目备份', extensions: ['json'] }],
+        properties: ['openFile'],
+      }
+      const { canceled, filePaths } = win
+        ? await dialog.showOpenDialog(win, options)
+        : await dialog.showOpenDialog(options)
+      if (canceled || !filePaths?.[0]) return null
+      const filePath = filePaths[0]
+      return { name: path.basename(filePath), content: fs.readFileSync(filePath, 'utf-8') }
+    }
+  )
+
   createAppMenu()
   createWindow()
   // 应用启动后 5 秒检查更新

@@ -87,10 +87,14 @@ const ApiConfig: React.FC = () => {
   };
 
   const saveModel = (m: AIModelConfig) => {
+    // 清理 API Key 首尾空白（粘贴时常带空格/换行）
+    const cleaned = { ...m, apiKey: (m.apiKey ?? '').trim() };
     const exists = settings.models.some((x) => x.id === m.id);
     update({
       ...settings,
-      models: exists ? settings.models.map((x) => (x.id === m.id ? m : x)) : [...settings.models, m],
+      models: exists
+        ? settings.models.map((x) => (x.id === m.id ? cleaned : x))
+        : [...settings.models, cleaned],
     });
     setShowModal(false);
     setEditingModel(null);

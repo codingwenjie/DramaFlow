@@ -11,6 +11,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveVideo: (sourcePath: string, defaultName: string) =>
     ipcRenderer.invoke('synthesis:save-as', { sourcePath, defaultName }),
 
+  // 保存文本文件（项目备份导出）
+  saveFile: (payload: { defaultName: string; content: string }) =>
+    ipcRenderer.invoke('file:save-text', payload),
+
+  // 打开文本文件（项目备份导入）
+  openFile: (filters?: { name: string; extensions: string[] }[]) =>
+    ipcRenderer.invoke('file:open-text', filters),
+
   // 监听合成进度，返回取消订阅函数
   onSynthesisProgress: (callback: (progress: unknown) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, progress: unknown) => callback(progress)

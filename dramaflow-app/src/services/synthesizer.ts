@@ -1,6 +1,7 @@
 import { loadModuleData, loadProjectFile } from '../data/storage';
 import type { DubbingLine, Shot, SynthesisConfig } from '../data/types';
 import type { SynthesisJobInput } from '../../electron/synthesis';
+import { blobToDataURL, dataURLToBlob } from './ai-http';
 
 /**
  * 渲染进程侧的合成任务组装：
@@ -34,8 +35,7 @@ export async function buildSynthesisJob(
   }
 
   const vertical = orientation !== 'horizontal';
-  const width = vertical ? 1080 : 1920;
-  const height = vertical ? 1920 : 1080;
+  const { width, height } = parseResolution(config.resolution, vertical);
   const jobShots = [];
   const assignedLines: DubbingLine[] = [];
 
@@ -44,12 +44,20 @@ export async function buildSynthesisJob(
     const line = queues.get(shot.scene)?.shift();
     if (line) assignedLines.push(line);
     const duration = parseFloat(shot.duration) || 3;
-    const imageBase64 = await generateShotImage(shot, i + 1, line?.text ?? '', vertical);
+    // 优先使用 AI 生成的视频片段；没有（或读不到）时才回退到分镜图渲染
+    const video = shot.videoUrl ? await resolveFileBase64(projectId, shot.videoUrl) : null;
+    const imageBase64 = video
+      ? ''
+      : await generateShotImage(projectId, shot, i + 1, line?.text ?? '', width, height, {
+          subtitles: config.postProcessing.subtitles,
+          watermarkRemoval: config.postProcessing.watermarkRemoval,
+        });
     jobShots.push({
       id: shot.id,
       scene: shot.scene,
       index: i + 1,
       imageBase64,
+      ...(video ? { videoBase64: video.base64, videoFormat: video.format } : {}),
       duration,
       desc: shot.desc,
       type: shot.type,
@@ -60,7 +68,7 @@ export async function buildSynthesisJob(
 
   const jobLines: SynthesisJobInput['lines'] = [];
   for (const l of assignedLines) {
-    const audio = await loadLineAudioBase64(projectId, l);
+    const audio = await resolveFileBase64(projectId, l.audioUrl);
     jobLines.push({
       id: l.id,
       scene: l.scene,
@@ -80,22 +88,52 @@ export async function buildSynthesisJob(
     fps: config.fps || 30,
     width,
     height,
+    bitrate: parseBitrate(config.bitrate),
+    postProcessing: {
+      colorGrading: config.postProcessing.colorGrading,
+      bgm: config.postProcessing.bgm,
+      introOutro: config.postProcessing.introOutro,
+    },
   };
   return { job, shotCount: jobShots.length };
 }
 
-/** 加载配音模块生成的音频（db:// 或 dataURL），转成 base64 供主进程使用 */
-async function loadLineAudioBase64(
+/** 解析输出分辨率设置（如 "1080×1920 (竖屏)"），解析失败回退按方向取默认 */
+function parseResolution(
+  resolution: string,
+  vertical: boolean
+): { width: number; height: number } {
+  const m = /(\d+)\s*[x×]\s*(\d+)/i.exec(resolution || '');
+  if (m) {
+    const w = parseInt(m[1], 10);
+    const h = parseInt(m[2], 10);
+    if (w > 0 && h > 0) return { width: w, height: h };
+  }
+  return vertical ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 };
+}
+
+/** 解析码率设置（"8 Mbps" → "8000k"），无法解析时返回 undefined（走默认编码） */
+function parseBitrate(bitrate: string): string | undefined {
+  const m = /(\d+(?:\.\d+)?)\s*(kbps|mbps)?/i.exec(bitrate || '');
+  if (!m) return undefined;
+  const num = parseFloat(m[1]);
+  if (!Number.isFinite(num) || num <= 0) return undefined;
+  const unit = (m[2] || 'mbps').toLowerCase();
+  return unit.startsWith('k') ? `${Math.round(num)}k` : `${Math.round(num * 1000)}k`;
+}
+
+/** 把 db:// 或 dataURL 引用的本地文件读出来，转成 base64 供主进程使用 */
+async function resolveFileBase64(
   projectId: string,
-  line: DubbingLine
+  ref?: string
 ): Promise<{ base64: string; format: string } | null> {
-  if (!line.audioUrl) return null;
+  if (!ref) return null;
   let blob: Blob | null = null;
   try {
-    if (line.audioUrl.startsWith('db://')) {
-      blob = (await loadProjectFile(projectId, line.audioUrl.slice(5))) ?? null;
-    } else if (line.audioUrl.startsWith('data:')) {
-      blob = await (await fetch(line.audioUrl)).blob();
+    if (ref.startsWith('db://')) {
+      blob = (await loadProjectFile(projectId, ref.slice(5))) ?? null;
+    } else if (ref.startsWith('data:')) {
+      blob = dataURLToBlob(ref);
     }
   } catch {
     blob = null;
@@ -108,18 +146,21 @@ async function loadLineAudioBase64(
   for (let i = 0; i < bytes.length; i += chunkSize) {
     binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
   }
-  return { base64: btoa(binary), format: blob.type || 'audio/wav' };
+  return { base64: btoa(binary), format: blob.type || 'application/octet-stream' };
 }
 
-/** 生成单张分镜图（竖屏 1080×1920 / 横屏 1920×1080），返回 JPEG dataURL */
+/** 生成单张分镜图（按项目分辨率），返回 JPEG dataURL */
 async function generateShotImage(
+  projectId: string,
   shot: Shot,
   index: number,
   subtitle: string,
-  vertical: boolean
+  W: number,
+  H: number,
+  opts: { subtitles: boolean; watermarkRemoval: boolean }
 ): Promise<string> {
-  const W = vertical ? 1080 : 1920;
-  const H = vertical ? 1920 : 1080;
+  const vertical = H > W;
+  const fs = W / (vertical ? 1080 : 1920); // 字体缩放：720P 等低分辨率下按比例缩小
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -143,7 +184,13 @@ async function generateShotImage(
   // 已有分镜图时作为底图
   if (shot.img) {
     try {
-      const img = await loadImage(shot.img);
+      // db:// 引用先从 IndexedDB 读出再画，否则图片永远不会出现在成片里
+      let src = shot.img;
+      if (shot.img.startsWith('db://')) {
+        const blob = await loadProjectFile(projectId, shot.img.slice(5)).catch(() => undefined);
+        if (blob) src = await blobToDataURL(blob);
+      }
+      const img = await loadImage(src);
       drawCover(ctx, img, W, H);
       ctx.fillStyle = 'rgba(10,12,16,0.55)';
       ctx.fillRect(0, 0, W, H);
@@ -157,7 +204,7 @@ async function generateShotImage(
   const body = vertical ? 52 : 40;
 
   // 场景编号
-  ctx.font = `600 ${vertical ? 44 : 34}px Inter, sans-serif`;
+  ctx.font = `600 ${Math.round((vertical ? 44 : 34) * fs)}px Inter, sans-serif`;
   ctx.fillStyle = '#E69500';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
@@ -165,9 +212,9 @@ async function generateShotImage(
 
   // 镜头类型 / 角度标签
   const chipText = `${shot.type} · ${shot.angle}`;
-  ctx.font = `500 ${vertical ? 38 : 30}px Inter, sans-serif`;
+  ctx.font = `500 ${Math.round((vertical ? 38 : 30) * fs)}px Inter, sans-serif`;
   const chipW = ctx.measureText(chipText).width + 56;
-  const chipH = vertical ? 64 : 52;
+  const chipH = Math.round((vertical ? 64 : 52) * fs);
   const chipY = H * 0.075;
   roundRect(ctx, margin, chipY, chipW, chipH, chipH / 2);
   ctx.fillStyle = 'rgba(230,149,0,0.14)';
@@ -176,44 +223,48 @@ async function generateShotImage(
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.fillStyle = '#F5C842';
-  ctx.fillText(chipText, margin + 28, chipY + (chipH - (vertical ? 38 : 30)) / 2);
+  ctx.fillText(chipText, margin + 28, chipY + (chipH - Math.round((vertical ? 38 : 30) * fs)) / 2);
 
   // 镜头编号
-  ctx.font = `700 ${big}px Outfit, sans-serif`;
+  ctx.font = `700 ${Math.round(big * fs)}px Outfit, sans-serif`;
   ctx.fillStyle = '#FFFFFF';
   ctx.fillText(`#${String(index).padStart(3, '0')}`, margin, H * 0.16);
 
   // 镜头描述（自动换行）
-  ctx.font = `400 ${body}px "PingFang SC", sans-serif`;
+  ctx.font = `400 ${Math.round(body * fs)}px "PingFang SC", sans-serif`;
   ctx.fillStyle = '#C9CDD8';
   const descLines = wrapText(ctx, shot.desc || '镜头描述', W - margin * 2, vertical ? 8 : 5);
   let descY = H * 0.28;
   for (const line of descLines) {
     ctx.fillText(line, margin, descY);
-    descY += body * 1.42;
+    descY += body * fs * 1.42;
   }
 
-  // 底部字幕条
-  const subH = vertical ? 360 : 240;
-  const subY = H - subH;
-  ctx.fillStyle = 'rgba(0,0,0,0.62)';
-  ctx.fillRect(0, subY, W, subH);
-  ctx.fillStyle = '#E69500';
-  ctx.fillRect(0, subY, 10, subH);
-  ctx.font = `600 ${vertical ? 52 : 40}px "PingFang SC", sans-serif`;
-  ctx.fillStyle = '#FFFFFF';
-  const subLines = wrapText(ctx, subtitle || shot.desc || '', W - margin * 2, vertical ? 4 : 3);
-  let subYText = subY + (vertical ? 64 : 42);
-  for (const line of subLines) {
-    ctx.fillText(line, margin + 8, subYText);
-    subYText += vertical ? 72 : 54;
+  // 底部字幕条（受「自动字幕」开关控制）
+  if (opts.subtitles) {
+    const subH = Math.round((vertical ? 360 : 240) * fs);
+    const subY = H - subH;
+    ctx.fillStyle = 'rgba(0,0,0,0.62)';
+    ctx.fillRect(0, subY, W, subH);
+    ctx.fillStyle = '#E69500';
+    ctx.fillRect(0, subY, 10, subH);
+    ctx.font = `600 ${Math.round((vertical ? 52 : 40) * fs)}px "PingFang SC", sans-serif`;
+    ctx.fillStyle = '#FFFFFF';
+    const subLines = wrapText(ctx, subtitle || shot.desc || '', W - margin * 2, vertical ? 4 : 3);
+    let subYText = subY + Math.round((vertical ? 64 : 42) * fs);
+    for (const line of subLines) {
+      ctx.fillText(line, margin + 8, subYText);
+      subYText += Math.round((vertical ? 72 : 54) * fs);
+    }
   }
 
-  // 水印
-  ctx.font = `400 ${vertical ? 28 : 22}px Inter, sans-serif`;
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.textAlign = 'right';
-  ctx.fillText('DramaFlow · AI 分镜占位', W - margin, H - 40);
+  // 水印（受「水印去除」开关控制）
+  if (!opts.watermarkRemoval) {
+    ctx.font = `400 ${Math.round((vertical ? 28 : 22) * fs)}px Inter, sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.textAlign = 'right';
+    ctx.fillText('DramaFlow · AI 分镜占位', W - margin, H - 40);
+  }
 
   return canvas.toDataURL('image/jpeg', 0.85);
 }

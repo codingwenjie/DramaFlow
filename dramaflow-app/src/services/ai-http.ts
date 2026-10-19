@@ -46,6 +46,18 @@ export function normalizeError(err: unknown): Error {
  * - 生产环境暂不支持代理，需另行部署服务端转发
  */
 export function fetchAI(url: string, init: RequestInit): Promise<Response> {
+  // 校验并清理请求头：Header 值必须是 ISO-8859-1 可表示字符，
+  // API Key 出现中文/Emoji/全角符号时给出明确提示，而不是抛晦涩的 fetch 异常
+  if (init.headers) {
+    const headers = init.headers as Record<string, string>;
+    for (const key of Object.keys(headers)) {
+      const value = String(headers[key] ?? '').trim();
+      if (/[^\x00-\xFF]/.test(value)) {
+        throw new Error('请求头包含非 ASCII 字符（通常是 API Key 粘贴错误），请检查模型配置');
+      }
+      headers[key] = value;
+    }
+  }
   const isDashScopeNative =
     url.includes('/services/aigc/') ||
     url.includes('/services/audio/') ||

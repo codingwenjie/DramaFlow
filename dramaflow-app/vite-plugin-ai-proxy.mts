@@ -10,6 +10,14 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
  */
 export const AI_PROXY_PATH = '/__dramaflow-ai-proxy';
 
+/** 截断并隐藏请求/响应里的超长内容（如 base64 图片），避免日志刷屏 */
+function summarize(value: unknown, maxLen = 1600): string {
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  if (!text) return '';
+  const cleaned = text.replace(/data:[^;]+;base64,[A-Za-z0-9+/=]+/g, 'data:<base64 已省略>');
+  return cleaned.length > maxLen ? `${cleaned.slice(0, maxLen)}…(共 ${cleaned.length} 字符)` : cleaned;
+}
+
 async function forward(req: IncomingMessage, res: ServerResponse): Promise<void> {
   try {
     const queryUrl = new URL(req.url || '', 'http://localhost').searchParams.get('url');
@@ -46,12 +54,21 @@ async function forward(req: IncomingMessage, res: ServerResponse): Promise<void>
     }
 
     const isBodyless = req.method === 'GET' || req.method === 'HEAD';
-    console.log(`[DramaFlow AI 代理] ${req.method} ${target.origin}${target.pathname}`);
+    const bodyText = isBodyless ? '' : summarize(body.toString('utf8'));
+    console.log(
+      `[DramaFlow AI 代理] ${req.method} ${target.origin}${target.pathname}` +
+        (bodyText ? `\n  → 请求体: ${bodyText}` : '')
+    );
     const upstream = await fetch(target, {
       method: req.method,
       headers,
       body: isBodyless ? undefined : body,
     });
+    const respBody = Buffer.from(await upstream.arrayBuffer());
+    console.log(
+      `[DramaFlow AI 代理] ← HTTP ${upstream.status}` +
+        (respBody.length ? `\n  ← 响应体: ${summarize(respBody.toString('utf8'))}` : '')
+    );
 
     // 回传上游响应（去掉会干扰响应的编码/连接头）
     const respHeaders: Record<string, string> = {};
@@ -62,7 +79,7 @@ async function forward(req: IncomingMessage, res: ServerResponse): Promise<void>
     });
 
     res.writeHead(upstream.status, respHeaders);
-    res.end(Buffer.from(await upstream.arrayBuffer()));
+    res.end(respBody);
   } catch (err) {
     console.error('[DramaFlow AI 代理] 转发失败:', err);
     if (!res.headersSent) {

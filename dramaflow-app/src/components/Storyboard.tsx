@@ -10,6 +10,7 @@ import { dataURLToBlob } from '../services/ai-http';
 import { getEnabledImageModels, getModelForPurpose, loadModelSettings } from '../services/ai-models';
 import { parseShotsToShots, parseShotLines } from '../services/shot-parser';
 import { startVideoGeneration, resumeVideoTask, loadVideoTasks } from '../services/video-generation';
+import { isOmniWanModel, isT2VVideoModel } from '../services/video-providers';
 
 const DEFAULT_SHOTS: Shot[] = [
   {
@@ -482,24 +483,28 @@ const Storyboard: React.FC = () => {
   const handleGenerateVideo = async (shotId: string) => {
     const shot = shots.find((s) => s.id === shotId);
     if (!shot || !activeProjectId || !videoModel) return;
-    if (!shot.img) {
+    const t2v = isT2VVideoModel(videoModel);
+    const omni = isOmniWanModel(videoModel);
+    if (!t2v && !omni && !shot.img) {
       alert('该镜头还没有分镜图，请先生成图片');
       return;
     }
     try {
-      // 角色参考图：按镜头中出现的角色匹配，每人最多 2 张，总上限 4 张
-      const shotText = `${shot.desc} ${shot.videoPrompt ?? ''}`;
-      const sortedChars = [...charactersRef.current].sort(
-        (a, b) => b.name.trim().length - a.name.trim().length
-      );
       const refs: string[] = [];
-      for (const c of sortedChars) {
-        const name = c.name.trim();
-        if (!name || !shotText.includes(name)) continue;
-        for (const ref of (c.referenceImages ?? []).slice(0, 2)) refs.push(ref);
-        if (refs.length >= 4) break;
+      if (!t2v && !omni) {
+        // 角色参考图：按镜头中出现的角色匹配，每人最多 2 张，总上限 4 张
+        const shotText = `${shot.desc} ${shot.videoPrompt ?? ''}`;
+        const sortedChars = [...charactersRef.current].sort(
+          (a, b) => b.name.trim().length - a.name.trim().length
+        );
+        for (const c of sortedChars) {
+          const name = c.name.trim();
+          if (!name || !shotText.includes(name)) continue;
+          for (const ref of (c.referenceImages ?? []).slice(0, 2)) refs.push(ref);
+          if (refs.length >= 4) break;
+        }
+        refs.length = Math.min(refs.length, 4);
       }
-      refs.length = Math.min(refs.length, 4);
       await startVideoGeneration(activeProjectId, shot, videoModel, videoAspectRatio, refs);
       setVideoTasks(loadVideoTasks(activeProjectId));
     } catch (error) {

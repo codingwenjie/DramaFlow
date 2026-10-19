@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useRef } from 'react';
 import type { Project } from '../data/types';
 import { useProjectStore } from '../store/useProjectStore';
-import { collectProjectBundle, parseProjectBundle, rebuildProjectFromBundle } from '../data/project-io';
+import { saveProjectFile } from '../data/storage';
+import { collectProjectBundle, parseProjectBundle, rebuildProjectFromBundle, base64ToBlob } from '../data/project-io';
 
 const C = {
   bg: '#F5F6F8',
@@ -144,27 +145,70 @@ const ProjectOverview: React.FC<{
     }
   };
 
-  const handleExport = (id: string) => {
-    const bundle = collectProjectBundle(id);
-    if (!bundle) return;
-    const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${bundle.project.name}-DramaFlow项目备份.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleExport = async (id: string) => {
+    try {
+      const bundle = await collectProjectBundle(id);
+      if (!bundle) return;
+      const content = JSON.stringify(bundle, null, 2);
+      const fileName = `${bundle.project.name}-DramaFlow项目备份.json`;
+
+      // 桌面版走原生保存对话框，避免浏览器式下载在 Electron 里失效
+      if (window.electronAPI?.saveFile) {
+        const saved = await window.electronAPI.saveFile({ defaultName: fileName, content });
+        if (saved) alert(`已导出项目备份：${saved}`);
+        return;
+      }
+
+      // 浏览器降级：Blob + <a download>
+      const blob = new Blob([content], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      alert(`导出失败：${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+
+  const handleImportText = async (text: string) => {
+    try {
+      const bundle = parseProjectBundle(text);
+      if (!bundle) {
+        alert('文件格式不正确，请选择 DramaFlow 导出的项目备份文件（.json）');
+        return;
+      }
+      const { project, modules } = rebuildProjectFromBundle(bundle);
+      // 先把备份里的图片/音频写回本地文件库（新项目 id 前缀），再导入文字数据
+      for (const f of bundle.files ?? []) {
+        await saveProjectFile(project.id, f.fileId, base64ToBlob(f.base64, f.type)).catch(() => {});
+      }
+      importProject(project, modules);
+      alert(`已导入项目「${project.name}」`);
+    } catch (e) {
+      alert(`导入失败：${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      // 桌面版走原生打开对话框；浏览器降级为隐藏 file input
+      if (window.electronAPI?.openFile) {
+        const opened = await window.electronAPI.openFile();
+        if (opened) await handleImportText(opened.content);
+        return;
+      }
+      fileInputRef.current?.click();
+    } catch (e) {
+      alert(`导入失败：${e instanceof Error ? e.message : String(e)}`);
+    }
   };
 
   const handleImportFile = async (file: File) => {
-    const bundle = parseProjectBundle(await file.text());
-    if (!bundle) {
-      alert('文件格式不正确，请选择 DramaFlow 导出的项目备份文件（.json）');
-      return;
-    }
-    const { project, modules } = rebuildProjectFromBundle(bundle);
-    importProject(project, modules);
-    alert(`已导入项目「${project.name}」`);
+    await handleImportText(await file.text());
   };
 
   const handleDialogSave = (data: ProjectDialogData) => {
@@ -198,7 +242,7 @@ const ProjectOverview: React.FC<{
             新建项目
           </button>
           <div style={{ marginTop: 12 }}>
-            <button onClick={() => fileInputRef.current?.click()}
+            <button onClick={() => void handleImport()}
               style={{ padding: '8px 18px', background: '#FFFFFF', color: '#5A6070', border: '1px solid #E4E7EE', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
               导入项目备份
             </button>
@@ -254,7 +298,7 @@ const ProjectOverview: React.FC<{
               style={{ padding: '5px 10px', background: C.input, border: `1px solid ${C.border}`, borderRadius: 4, fontSize: 12, color: C.text, outline: 'none', width: 150, fontFamily: 'Inter, sans-serif' }}
             />
             <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => fileInputRef.current?.click()}
+              <button onClick={() => void handleImport()}
                 style={{ padding: '6px 12px', background: C.white, border: `1px solid ${C.border}`, borderRadius: 4, color: C.textSub, fontSize: 12, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}>
                 导入
               </button>

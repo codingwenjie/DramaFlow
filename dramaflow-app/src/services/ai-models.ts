@@ -159,6 +159,16 @@ export const DEFAULT_MODELS: AIModelConfig[] = [
     purposes: ['video'],
   },
   {
+    id: 'dashscope-wan-t2v',
+    name: '通义万相 Wan 文生视频',
+    provider: 'dashscope',
+    baseUrl: 'https://dashscope.aliyuncs.com/api/v1',
+    apiKey: '',
+    model: 'wan2.7-t2v-2026-06-12',
+    enabled: false,
+    purposes: ['video'],
+  },
+  {
     id: 'custom-video',
     name: '自定义视频模型',
     provider: 'custom',
@@ -272,20 +282,41 @@ export const MODEL_PRESETS: ModelPreset[] = [
     description: '万相图生视频，异步任务（模型名可改为 wan2.x 系列）',
     purposes: ['video'],
   },
+  {
+    key: 'dashscope-wan-t2v',
+    label: '通义万相 Wan2.7 文生视频',
+    provider: 'dashscope',
+    baseUrl: 'https://dashscope.aliyuncs.com/api/v1',
+    model: 'wan2.7-t2v-2026-06-12',
+    description: '万相 2.7 文生视频（t2v），纯文本提示词，异步任务',
+    purposes: ['video'],
+  },
+  {
+    key: 'dashscope-wan3-video',
+    label: '通义万相 Wan3.0 全能视频',
+    provider: 'dashscope',
+    baseUrl: 'https://dashscope.aliyuncs.com/api/v1',
+    model: 'wan3.0-video',
+    description: '万相 3.0 全能模型：有分镜图走首帧生视频，无图走文生视频；当前为邀测模型，需先在百炼控制台开通',
+    purposes: ['video'],
+  },
 ];
 
 export function getDefaultSettings(): AIModelSettings {
+  // 全新安装只内置离线模拟模型，避免配置页被一堆未配置的空实例占满；
+  // 真实服务商通过“快捷添加服务商”或“自定义模型”按需添加。
+  const mock = DEFAULT_MODELS.find((d) => d.id === 'mock-default')!;
   return {
-    models: DEFAULT_MODELS,
+    models: [mock],
     defaults: {
       script: 'mock-default',
       polish: 'mock-default',
       storyboard: 'mock-default',
       character: 'mock-default',
       suggestion: 'mock-default',
-      image: 'dashscope-qwen-image',
+      image: 'mock-default',
       dubbing: 'mock-default',
-      video: 'custom-video',
+      video: 'mock-default',
       generic: 'mock-default',
     },
   };
@@ -320,21 +351,39 @@ export function loadModelSettings(): AIModelSettings {
       return defaults;
     }
     const parsed = JSON.parse(data) as AIModelSettings;
-    // 合并内置模型：新增的内置模型（如通义 TTS）自动加入，
-    // 内置模拟模型按最新用途扩展，保证离线模式覆盖所有新增用途
     const modelsById = new Map<string, AIModelConfig>();
     for (const m of parsed.models ?? []) modelsById.set(m.id, m);
-    for (const def of DEFAULT_MODELS) {
-      const existing = modelsById.get(def.id);
-      if (!existing) {
-        modelsById.set(def.id, def);
-      } else if (def.id === 'mock-default') {
-        modelsById.set(def.id, {
-          ...existing,
-          purposes: Array.from(new Set([...(existing.purposes ?? []), ...def.purposes])),
-        });
-      }
+
+    // 内置模拟模型是离线兜底，必须始终存在并覆盖所有用途
+    const mockDef = DEFAULT_MODELS.find((d) => d.id === 'mock-default');
+    if (mockDef) {
+      const existing = modelsById.get('mock-default');
+      modelsById.set(
+        'mock-default',
+        existing
+          ? {
+              ...existing,
+              purposes: Array.from(new Set([...(existing.purposes ?? []), ...mockDef.purposes])),
+            }
+          : mockDef
+      );
     }
+
+    // 清理未配置的内置占位实例：未启用、未填 API Key、且未改过默认配置的
+    // 内置模型不再显示（用户需要时通过“快捷添加服务商”或“自定义模型”添加）
+    const defaultById = new Map(DEFAULT_MODELS.map((d) => [d.id, d]));
+    for (const m of Array.from(modelsById.values())) {
+      if (m.id === 'mock-default') continue;
+      const def = defaultById.get(m.id);
+      if (!def) continue; // 自定义模型或通过预设添加的模型（preset-*）保留
+      if (m.enabled || (m.apiKey ?? '').trim()) continue; // 已启用或已填 Key 的保留
+      const untouched =
+        (m.baseUrl ?? '') === (def.baseUrl ?? '') &&
+        (m.model ?? '') === (def.model ?? '') &&
+        (m.name ?? '') === (def.name ?? '');
+      if (untouched) modelsById.delete(m.id);
+    }
+
     parsed.models = Array.from(modelsById.values());
     parsed.defaults = parsed.defaults ?? getDefaultSettings().defaults;
     // 纠正指向已停用/不存在模型的默认分配（例如旧版 custom-tts 占位），回退到模拟模型

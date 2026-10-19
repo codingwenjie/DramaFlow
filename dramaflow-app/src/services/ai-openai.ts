@@ -10,6 +10,7 @@ import {
 import { AIModelConfig, AIModelPurpose } from '../data/types';
 import { requestAIJSON, normalizeError } from './ai-http';
 import { getImageAdapter, getTTSAdapter } from './provider-adapters';
+import { testVideoConnection } from './video-generation';
 
 interface ChatMessage {
   role: 'system' | 'user';
@@ -106,12 +107,19 @@ export async function testModelConnection(config: AIModelConfig): Promise<{
     config.purposes.includes('dubbing') &&
     !config.purposes.some((p) => CHAT_PURPOSES.includes(p)) &&
     !config.purposes.includes('image');
+  const isVideoOnly =
+    config.purposes.includes('video') &&
+    !config.purposes.some((p) => CHAT_PURPOSES.includes(p)) &&
+    !config.purposes.includes('image') &&
+    !config.purposes.includes('dubbing');
   const start = Date.now();
   try {
     if (isImageOnly) {
       await requestImage(config, '一张纯色的测试图片', '1024x1024');
     } else if (isTTSOnly) {
       await requestTTS(config, '你好，这是一段配音连通性测试。');
+    } else if (isVideoOnly) {
+      return await testVideoConnection(config);
     } else {
       await chatCompletion(config, '你是一个连接测试助手。', '请只回复两个字：正常', 4);
     }

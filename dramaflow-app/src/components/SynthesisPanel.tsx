@@ -128,8 +128,8 @@ const SegmentThumb: React.FC<{ shot?: Shot }> = ({ shot }) => {
   return (
     <div
       style={{
-        width: 56,
-        height: 32,
+        width: 80,
+        height: 45,
         background: C.inputBg,
         borderRadius: 3,
         overflow: 'hidden',
@@ -327,7 +327,7 @@ const SynthesisPanel: React.FC = () => {
             background: C.card,
             border: `1px solid ${C.border}`,
             borderRadius: 8,
-            padding: 16,
+            padding: 12,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -356,7 +356,7 @@ const SynthesisPanel: React.FC = () => {
                 src={videoSrc}
                 controls
                 style={{
-                  height: 480,
+                  height: 380,
                   maxWidth: '100%',
                   background: '#000',
                   borderRadius: 6,
@@ -367,8 +367,8 @@ const SynthesisPanel: React.FC = () => {
             ) : (
               <div
                 style={{
-                  width: 270,
-                  height: 480,
+                  width: 225,
+                  height: 400,
                   background: '#000000',
                   borderRadius: 6,
                   display: 'flex',
@@ -382,8 +382,8 @@ const SynthesisPanel: React.FC = () => {
               >
                 <div
                   style={{
-                    width: 56,
-                    height: 56,
+                    width: 48,
+                    height: 48,
                     borderRadius: '50%',
                     background: 'rgba(255,255,255,0.9)',
                     display: 'flex',
@@ -429,19 +429,19 @@ const SynthesisPanel: React.FC = () => {
             overflow: 'hidden',
           }}
         >
-          <div style={{ padding: '14px 16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ padding: '16px 18px 2px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <SectionLabel>场次片段</SectionLabel>
-            <span style={{ fontSize: 11, color: C.textMute }}>{shots.length} 个镜头</span>
+            <span style={{ fontSize: 11, color: C.textMute }}>共 {segments.length} 个片段 · {shots.length} 个镜头</span>
           </div>
 
           <div
             style={{
               flex: 1,
               overflow: 'auto',
-              padding: '8px 16px 16px',
+              padding: '10px 16px 16px',
               display: 'flex',
               flexDirection: 'column',
-              gap: 6,
+              gap: 8,
             }}
           >
             {segments.length === 0 ? (
@@ -460,37 +460,37 @@ const SynthesisPanel: React.FC = () => {
                       background: C.card,
                       border: `1px solid ${isSelected ? '#F5C842' : C.border}`,
                       borderRadius: 5,
-                      padding: '11px 14px',
-                      marginBottom: 8,
+                      padding: '14px 18px',
+                      marginBottom: 10,
                       display: 'flex',
-                      gap: 12,
+                      gap: 14,
                       alignItems: 'center',
                       cursor: 'pointer',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                     }}
                   >
                     <SegmentThumb shot={seg.thumbShot} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                        <span style={{ fontSize: 12, color: C.text, fontWeight: 500, fontFamily: 'Inter, sans-serif' }}>
+                        <span style={{ fontSize: 13, color: C.text, fontWeight: 500, fontFamily: 'Inter, sans-serif' }}>
                           {seg.name}
                         </span>
-                        <span style={{ fontSize: 9, color: C.textMute, fontFamily: "'JetBrains Mono', monospace" }}>
+                        <span style={{ fontSize: 10, color: C.textMute, fontFamily: "'JetBrains Mono', monospace" }}>
                           {seg.part}
                         </span>
                       </div>
-                      <div style={{ display: 'flex', gap: 10, fontSize: 10, color: C.textSub, fontFamily: 'Inter, sans-serif' }}>
+                      <div style={{ display: 'flex', gap: 10, fontSize: 11, color: C.textSub, fontFamily: 'Inter, sans-serif' }}>
                         <span>{seg.shots} 个镜头</span>
                         <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{seg.duration.toFixed(1)}s</span>
                       </div>
                     </div>
                     <span
                       style={{
-                        fontSize: 10,
+                        fontSize: 11,
                         background: s.bg,
                         color: s.color,
                         border: `1px solid ${s.border}`,
-                        padding: '2px 8px',
+                        padding: '3px 10px',
                         borderRadius: 3,
                         fontFamily: "'JetBrains Mono', monospace",
                         flexShrink: 0,
