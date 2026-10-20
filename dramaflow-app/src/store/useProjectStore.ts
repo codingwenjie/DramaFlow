@@ -83,6 +83,8 @@ export const useProjectStore = create<ProjectState>()(
         if (withModules.shots) saveModuleData(project.id, 'shots', withModules.shots);
         if (withModules.characters) saveModuleData(project.id, 'characters', withModules.characters);
         if (withModules.dubbing) saveModuleData(project.id, 'dubbing', withModules.dubbing);
+        if (withModules.bgmLibrary?.length)
+          saveModuleData(project.id, 'bgmLibrary', withModules.bgmLibrary);
         set((state) => ({ projects: [project, ...state.projects] }));
         saveProjects(get().projects);
       },

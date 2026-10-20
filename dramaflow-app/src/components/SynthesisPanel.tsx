@@ -1,11 +1,19 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { C } from '../constants';
 import { Button, SectionLabel, ProgressBar } from './common';
 import { useAppStore } from '../store/useAppStore';
 import { useProjectStore } from '../store/useProjectStore';
-import { loadModuleData, saveModuleData, loadProjectFile } from '../data/storage';
-import type { Shot, SynthesisConfig } from '../data/types';
+import {
+  loadModuleData,
+  saveModuleData,
+  loadProjectFile,
+  saveProjectFile,
+  deleteProjectFile,
+  generateId,
+} from '../data/storage';
+import type { Shot, SynthesisConfig, BgmItem } from '../data/types';
 import { buildSynthesisJob } from '../services/synthesizer';
+import { base64ToBlob } from '../data/project-io';
 import type { SynthesisResult } from '../../electron/synthesis';
 
 interface Segment {
@@ -16,6 +24,25 @@ interface Segment {
   duration: number;
   status: string;
   thumbShot?: Shot;
+}
+
+
+const AUDIO_FILTERS = [
+  { name: '音频文件', extensions: ['mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'] },
+];
+
+const AUDIO_MIME: Record<string, string> = {
+  mp3: 'audio/mpeg',
+  wav: 'audio/wav',
+  m4a: 'audio/mp4',
+  aac: 'audio/aac',
+  ogg: 'audio/ogg',
+  flac: 'audio/flac',
+};
+
+function mimeFromName(name: string): string {
+  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+  return AUDIO_MIME[ext] ?? 'audio/mpeg';
 }
 
 interface OutputSetting {
@@ -165,6 +192,10 @@ const SynthesisPanel: React.FC = () => {
   const [shots, setShots] = useState<Shot[]>([]);
   const [selectedSegmentId, setSelectedSegmentId] = useState<string>('');
   const [toggles, setToggles] = useState<PostToggle[]>([]);
+  const [bgmList, setBgmList] = useState<BgmItem[]>([]);
+  const [bgmPreviewUrl, setBgmPreviewUrl] = useState<string | null>(null);
+  const [bgmBusy, setBgmBusy] = useState(false);
+  const bgmInputRef = useRef<HTMLInputElement>(null);
 
   const [isSynthesizing, setIsSynthesizing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -185,6 +216,7 @@ const SynthesisPanel: React.FC = () => {
     }));
     setConfig(data);
     setShots(shotData);
+    setBgmList(loadModuleData<BgmItem[]>(activeProjectId, 'bgmLibrary', []));
     setToggles([
       { key: 'tone', label: '色调统一', enabled: data.postProcessing.colorGrading },
       { key: 'bgm', label: '背景音乐', enabled: data.postProcessing.bgm },
@@ -201,6 +233,27 @@ const SynthesisPanel: React.FC = () => {
     saveModuleData(activeProjectId, 'synthesis', config);
   }, [config, activeProjectId, loaded]);
 
+  // 保存 BGM 素材库清单
+  useEffect(() => {
+    if (!activeProjectId || !loaded) return;
+    saveModuleData(activeProjectId, 'bgmLibrary', bgmList);
+  }, [bgmList, activeProjectId, loaded]);
+
+  // 选中 BGM 时生成试播 URL
+  useEffect(() => {
+    let alive = true;
+    setBgmPreviewUrl(null);
+    if (!activeProjectId || !config?.bgmFileId) return;
+    loadProjectFile(activeProjectId, config.bgmFileId)
+      .then((blob) => {
+        if (alive && blob) setBgmPreviewUrl(URL.createObjectURL(blob));
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [activeProjectId, config?.bgmFileId]);
+
   const handleToggle = (key: string) => {
     const configKey = toggleKeyToConfigKey[key];
     setToggles((prev) => prev.map((t) => (t.key === key ? { ...t, enabled: !t.enabled } : t)));
@@ -214,6 +267,68 @@ const SynthesisPanel: React.FC = () => {
       });
     }
   };
+
+  // ===== BGM 素材库 =====
+  const addBgmFile = useCallback(
+    async (name: string, blob: Blob) => {
+      if (!activeProjectId) return;
+      setBgmBusy(true);
+      try {
+        const fileId = `bgm-${generateId()}`;
+        await saveProjectFile(activeProjectId, fileId, blob);
+        setBgmList((prev) => [...prev, { fileId, name }]);
+        setConfig((prev) =>
+          prev ? { ...prev, bgmFileId: fileId, bgmVolume: prev.bgmVolume ?? 30 } : prev
+        );
+      } catch (e) {
+        alert(`导入失败：${e instanceof Error ? e.message : String(e)}`);
+      } finally {
+        setBgmBusy(false);
+      }
+    },
+    [activeProjectId]
+  );
+
+  const handleImportBgm = useCallback(async () => {
+    if (!activeProjectId || bgmBusy) return;
+    try {
+      if (window.electronAPI?.openBinaryFile) {
+        const opened = await window.electronAPI.openBinaryFile(AUDIO_FILTERS);
+        if (opened) {
+          await addBgmFile(opened.name, base64ToBlob(opened.base64, mimeFromName(opened.name)));
+        }
+        return;
+      }
+      // 浏览器降级：隐藏 file input
+      bgmInputRef.current?.click();
+    } catch (e) {
+      alert(`导入失败：${e instanceof Error ? e.message : String(e)}`);
+    }
+  }, [activeProjectId, bgmBusy, addBgmFile]);
+
+  const handleImportBgmFile = useCallback(
+    async (file: File) => {
+      await addBgmFile(file.name, file);
+    },
+    [addBgmFile]
+  );
+
+  const handleSelectBgm = useCallback((fileId: string) => {
+    setConfig((prev) => (prev ? { ...prev, bgmFileId: fileId } : prev));
+  }, []);
+
+  const handleRemoveBgm = useCallback(
+    async (fileId: string) => {
+      setBgmList((prev) => prev.filter((b) => b.fileId !== fileId));
+      setConfig((prev) =>
+        prev && prev.bgmFileId === fileId ? { ...prev, bgmFileId: undefined } : prev
+      );
+      if (activeProjectId) {
+        await deleteProjectFile(activeProjectId, fileId).catch(() => {});
+      }
+    },
+    [activeProjectId]
+  );
 
   // 分镜按幕次分组为片段列表
   const segments: Segment[] = useMemoSegments(shots);
@@ -553,6 +668,121 @@ const SynthesisPanel: React.FC = () => {
               </div>
             ))}
           </div>
+
+          {/* BGM 素材库（开启背景音乐时显示） */}
+          {config.postProcessing.bgm && (
+            <div style={{ borderTop: `1px solid ${C.inputBg}`, marginTop: 12, paddingTop: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 11, color: C.textSub }}>音乐素材</span>
+                <button
+                  onClick={() => void handleImportBgm()}
+                  disabled={bgmBusy}
+                  style={{
+                    background: bgmBusy ? C.inputBg : C.amberLight,
+                    border: `1px solid ${bgmBusy ? C.border : '#F5C842'}`,
+                    borderRadius: 3,
+                    color: bgmBusy ? C.textMute : '#B47400',
+                    fontSize: 10,
+                    padding: '3px 10px',
+                    cursor: bgmBusy ? 'default' : 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  {bgmBusy ? '导入中…' : '+ 导入音乐'}
+                </button>
+                <input
+                  ref={bgmInputRef}
+                  type="file"
+                  accept="audio/*"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) void handleImportBgmFile(f);
+                    e.target.value = '';
+                  }}
+                />
+              </div>
+
+              {bgmList.length === 0 ? (
+                <div style={{ fontSize: 10, color: C.textMute, marginTop: 8, lineHeight: 1.6 }}>
+                  导入 MP3 / WAV 等音乐文件，合成时将循环铺底、随镜头淡出；未选择素材时不混入背景音
+                </div>
+              ) : (
+                <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {bgmList.map((b) => {
+                    const sel = config.bgmFileId === b.fileId;
+                    return (
+                      <div
+                        key={b.fileId}
+                        onClick={() => handleSelectBgm(b.fileId)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          padding: '6px 10px',
+                          borderRadius: 4,
+                          cursor: 'pointer',
+                          background: sel ? C.amberLight : C.inputBg,
+                          border: `1px solid ${sel ? '#F5C842' : C.border}`,
+                        }}
+                      >
+                        <span style={{ fontSize: 10, color: sel ? '#B47400' : C.textMute }}>
+                          {sel ? '◉' : '○'}
+                        </span>
+                        <span
+                          style={{
+                            flex: 1,
+                            minWidth: 0,
+                            fontSize: 11,
+                            color: sel ? '#B47400' : C.text,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                          title={b.name}
+                        >
+                          {b.name}
+                        </span>
+                        <span
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleRemoveBgm(b.fileId);
+                          }}
+                          style={{ fontSize: 11, color: C.textMute, cursor: 'pointer', padding: '0 2px' }}
+                          title="删除素材"
+                        >
+                          ✕
+                        </span>
+                      </div>
+                    );
+                  })}
+
+                  {bgmPreviewUrl && (
+                    <audio controls src={bgmPreviewUrl} style={{ width: '100%', height: 30, marginTop: 2 }} />
+                  )}
+
+                  <div style={{ marginTop: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, color: C.textSub }}>音乐音量</span>
+                      <span style={{ fontSize: 11, color: C.amber, fontFamily: "'JetBrains Mono', monospace" }}>
+                        {config.bgmVolume ?? 30}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={5}
+                      max={100}
+                      value={config.bgmVolume ?? 30}
+                      onChange={(e) =>
+                        setConfig((prev) => (prev ? { ...prev, bgmVolume: Number(e.target.value) } : prev))
+                      }
+                      style={{ width: '100%', accentColor: C.amber }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 合成进度 */}

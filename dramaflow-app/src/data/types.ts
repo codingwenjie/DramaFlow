@@ -117,6 +117,30 @@ export interface SynthesisConfig {
     introOutro: boolean;
     watermarkRemoval: boolean;
   };
+  /** 背景音乐素材（项目文件 db:// 引用的 fileId），未选择时不混入 BGM */
+  bgmFileId?: string;
+  /** 背景音乐音量（0~100，默认 30） */
+  bgmVolume?: number;
+}
+
+/** BGM 素材库条目（文件本体存项目文件库，fileId 以 bgm- 开头） */
+export interface BgmItem {
+  fileId: string;
+  name: string;
+}
+
+/** Prompt 模板：作为对应用途生成时的系统提示词（角色设定 + 输出格式） */
+export interface PromptTemplate {
+  id: string;
+  name: string;
+  /** 适用的 AI 用途（script / polish / storyboard / character / suggestion） */
+  purpose: AIModelPurpose;
+  desc: string;
+  content: string;
+  /** 启用后该用途的生成请求使用此模板；同一用途同时只启用一个 */
+  enabled: boolean;
+  builtin: boolean;
+  updatedAt: string;
 }
 
 // AI 模型专业用途分类

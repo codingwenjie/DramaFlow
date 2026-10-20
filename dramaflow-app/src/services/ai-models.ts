@@ -256,6 +256,15 @@ export const MODEL_PRESETS: ModelPreset[] = [
     purposes: ['dubbing'],
   },
   {
+    key: 'dashscope-cosyvoice',
+    label: 'CosyVoice 语音合成',
+    provider: 'dashscope',
+    baseUrl: 'https://dashscope.aliyuncs.com/api/v1',
+    model: 'cosyvoice-v2',
+    description: '通义 CosyVoice：支持情绪指令控制与更自然的中文音色（音色见百炼控制台）',
+    purposes: ['dubbing'],
+  },
+  {
     key: 'kling-video',
     label: '可灵 Kling 视频',
     provider: 'kling',

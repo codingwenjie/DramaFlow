@@ -19,6 +19,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFile: (filters?: { name: string; extensions: string[] }[]) =>
     ipcRenderer.invoke('file:open-text', filters),
 
+  // 打开二进制文件（BGM 等音频素材导入，返回 base64）
+  openBinaryFile: (filters?: { name: string; extensions: string[] }[]) =>
+    ipcRenderer.invoke('file:open-binary', filters),
+
   // 监听合成进度，返回取消订阅函数
   onSynthesisProgress: (callback: (progress: unknown) => void) => {
     const listener = (_event: Electron.IpcRendererEvent, progress: unknown) => callback(progress)

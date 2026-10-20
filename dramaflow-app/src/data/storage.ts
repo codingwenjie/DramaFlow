@@ -1,4 +1,4 @@
-import { Project, Episode, Character, Shot, DubbingLine, SynthesisConfig, VideoTask } from './types';
+import { Project, Episode, Character, Shot, DubbingLine, SynthesisConfig, VideoTask, BgmItem } from './types';
 import { dbGet, dbSet, dbDelete, dbAllKeys, dbSaveFile, dbLoadFile, dbDeleteFile, dbDeleteFilesByPrefix } from './db';
 
 const STORAGE_KEY = 'dramaflow-data';
@@ -79,6 +79,11 @@ export function savePersistent(key: string, value: string): void {
   syncSet(key, value);
 }
 
+/** 持久化读取：localStorage 同步缓存（写入时已双写） */
+export function loadPersistent(key: string): string | null {
+  return syncGet(key);
+}
+
 // ===== 项目列表 =====
 export function saveProjects(projects: Project[]): void {
   syncSet(STORAGE_KEY, JSON.stringify(projects));
@@ -135,7 +140,7 @@ export function generateModuleId(prefix: string): string {
 }
 
 // ===== 模块数据（按项目隔离） =====
-type ModuleData = Episode[] | Character[] | Shot[] | DubbingLine[] | SynthesisConfig | VideoTask[];
+type ModuleData = Episode[] | Character[] | Shot[] | DubbingLine[] | SynthesisConfig | VideoTask[] | BgmItem[];
 
 function moduleKey(projectId: string, module: string): string {
   return `dramaflow-module-${projectId}-${module}`;

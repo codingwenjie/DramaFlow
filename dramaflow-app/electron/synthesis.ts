@@ -43,6 +43,13 @@ export interface SynthesisJobInput {
   height: number;
   /** 视频码率（如 "8000k"），缺省时走 CRF 默认编码 */
   bitrate?: string;
+  /** 背景音乐素材（base64），开启 BGM 且提供了素材时混入；无素材时不混音 */
+  bgm?: {
+    base64: string;
+    format: string;
+    /** 音量系数（0~1.5），缺省 0.3 */
+    volume?: number;
+  };
   /** 后期处理开关（字幕/水印在渲染进程画图时处理） */
   postProcessing?: {
     colorGrading: boolean;
@@ -87,6 +94,16 @@ export async function runSynthesis(
   const shots = job.shots;
   const lineById = new Map(job.lines.map((l) => [l.id, l]));
   const post = job.postProcessing ?? { colorGrading: false, bgm: false, introOutro: false };
+
+  // 背景音乐素材写入临时目录（循环混入每个镜头，素材不足时自动循环补齐）
+  const useBgm = post.bgm && !!job.bgm?.base64;
+  let bgmPath: string | undefined;
+  if (useBgm && job.bgm) {
+    const ext = audioExt(job.bgm.format);
+    bgmPath = path.join(workDir, `bgm.${ext}`);
+    fs.writeFileSync(bgmPath, Buffer.from(job.bgm.base64, 'base64'));
+  }
+  const bgmVolume = Math.min(1.5, Math.max(0.05, job.bgm?.volume ?? 0.3));
 
   try {
     onProgress({ stage: 'assets', percent: 2, message: '素材加载' });
@@ -163,7 +180,8 @@ export async function runSynthesis(
           fps,
           volume: line ? line.volume / 100 : undefined,
           colorGrading: post.colorGrading,
-          bgm: post.bgm,
+          bgmPath,
+          bgmVolume,
           bitrate: job.bitrate,
         });
       } else {
@@ -177,7 +195,8 @@ export async function runSynthesis(
           fps,
           volume: line ? line.volume / 100 : undefined,
           colorGrading: post.colorGrading,
-          bgm: post.bgm,
+          bgmPath,
+          bgmVolume,
           bitrate: job.bitrate,
         });
       }
@@ -264,7 +283,10 @@ interface RenderShotParams {
   fps: number;
   volume?: number;
   colorGrading?: boolean;
-  bgm?: boolean;
+  /** 背景音乐文件路径（-stream_loop 循环补齐镜头时长） */
+  bgmPath?: string;
+  /** BGM 音量系数（0~1.5） */
+  bgmVolume?: number;
   bitrate?: string;
 }
 
@@ -276,16 +298,9 @@ async function renderShot(p: RenderShotParams): Promise<void> {
   } else {
     args.push('-f', 'lavfi', '-t', String(p.duration), '-i', 'anullsrc=r=44100:cl=stereo');
   }
-  if (p.bgm) {
-    // 占位背景音：柔和和弦垫底，后续可替换为真实音乐素材
-    args.push(
-      '-f',
-      'lavfi',
-      '-t',
-      String(p.duration),
-      '-i',
-      'aevalsrc=0.035*sin(2*PI*196*t)+0.025*sin(2*PI*294*t)+0.018*sin(2*PI*392*t):s=44100'
-    );
+  if (p.bgmPath) {
+    // 真实 BGM：循环补齐镜头时长，结束前 1.5s 淡出
+    args.push('-stream_loop', '-1', '-i', p.bgmPath);
   }
   const volume = p.volume != null ? Math.min(1.5, Math.max(0.2, p.volume)) : 0.9;
   let videoChain =
@@ -299,11 +314,13 @@ async function renderShot(p: RenderShotParams): Promise<void> {
   }
   videoChain += ',format=yuv420p[v]';
   let audioFilter: string;
-  if (p.bgm) {
+  if (p.bgmPath) {
+    const fadeStart = Math.max(0, p.duration - 1.5);
     audioFilter =
-      `[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=${volume}[d0];` +
-      `[2:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=0.55,lowpass=f=900[a1];` +
-      `[d0][a1]amix=inputs=2:duration=first:dropout_transition=0[a]`;
+      `[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=${volume},apad[d0];` +
+      `[2:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,` +
+      `volume=${p.bgmVolume ?? 0.3},afade=t=out:st=${fadeStart.toFixed(2)}:d=1.5[bg];` +
+      `[d0][bg]amix=inputs=2:duration=first:dropout_transition=0[a]`;
   } else {
     audioFilter = `[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=${volume},apad[a]`;
   }
@@ -335,34 +352,38 @@ interface AIClipParams {
   fps: number;
   volume?: number;
   colorGrading?: boolean;
-  bgm?: boolean;
+  bgmPath?: string;
+  bgmVolume?: number;
   bitrate?: string;
 }
 
 /**
  * AI 视频片段统一转码：缩放裁剪到项目分辨率、统一帧率/编码，
- * 配音优先（替换 AI 视频原声，避免双重人声），无配音时保留原声或垫背景音。
+ * 配音优先（替换 AI 视频原声，避免双重人声），可选混入背景音乐。
  */
 async function renderAIClip(p: AIClipParams): Promise<void> {
   const args = ['-y', '-i', p.videoPath];
 
-  // 决定音频来源：配音 > 背景音 > AI 视频原声 > 静音
-  let audioInput: string;
+  // 输入序号：0=视频；配音存在时 1=配音；BGM 存在时排在其后
+  let dubbingIndex: number | null = null;
+  let bgmIndex: number | null = null;
   if (p.audioPath) {
     args.push('-i', p.audioPath);
-    audioInput = '[1:a]';
-  } else if (p.bgm) {
-    args.push(
-      '-f', 'lavfi',
-      '-t', String(p.duration),
-      '-i', 'aevalsrc=0.035*sin(2*PI*196*t)+0.025*sin(2*PI*294*t)+0.018*sin(2*PI*392*t):s=44100'
-    );
-    audioInput = '[1:a]';
-  } else if (await hasAudioTrack(p.videoPath)) {
-    audioInput = '[0:a]';
-  } else {
-    args.push('-f', 'lavfi', '-t', String(p.duration), '-i', 'anullsrc=r=44100:cl=stereo');
-    audioInput = '[1:a]';
+    dubbingIndex = 1;
+  }
+  if (p.bgmPath) {
+    args.push('-stream_loop', '-1', '-i', p.bgmPath);
+    bgmIndex = dubbingIndex === null ? 1 : 2;
+  }
+  // 无配音、无 BGM 时保留 AI 视频原声，原声缺失则垫静音
+  let fallbackIndex: number | null = null;
+  if (dubbingIndex === null && bgmIndex === null) {
+    if (await hasAudioTrack(p.videoPath)) {
+      fallbackIndex = 0;
+    } else {
+      args.push('-f', 'lavfi', '-t', String(p.duration), '-i', 'anullsrc=r=44100:cl=stereo');
+      fallbackIndex = 1;
+    }
   }
 
   const videoDur = await probeDuration(p.videoPath);
@@ -376,14 +397,26 @@ async function renderAIClip(p: AIClipParams): Promise<void> {
   }
   videoChain += `,fps=${p.fps},format=yuv420p[v]`;
 
+  const fmt = 'aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo';
   let audioFilter: string;
-  if (p.audioPath) {
+  if (dubbingIndex !== null) {
     const volume = p.volume != null ? Math.min(1.5, Math.max(0.2, p.volume)) : 0.9;
-    audioFilter = `${audioInput}aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=${volume},apad[a]`;
-  } else if (p.bgm) {
-    audioFilter = `${audioInput}aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=0.55,lowpass=f=900[a]`;
+    const dubChain = `[${dubbingIndex}:a]${fmt},volume=${volume},apad[d0]`;
+    if (bgmIndex !== null) {
+      const fadeStart = Math.max(0, p.duration - 1.5);
+      audioFilter =
+        `${dubChain};` +
+        `[${bgmIndex}:a]${fmt},volume=${p.bgmVolume ?? 0.3},afade=t=out:st=${fadeStart.toFixed(2)}:d=1.5[bg];` +
+        `[d0][bg]amix=inputs=2:duration=first:dropout_transition=0[a]`;
+    } else {
+      audioFilter = `${dubChain}[a]`;
+    }
+  } else if (bgmIndex !== null) {
+    const fadeStart = Math.max(0, p.duration - 1.5);
+    audioFilter =
+      `[${bgmIndex}:a]${fmt},volume=${p.bgmVolume ?? 0.3},afade=t=out:st=${fadeStart.toFixed(2)}:d=1.5,apad[a]`;
   } else {
-    audioFilter = `${audioInput}aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,volume=1.0,apad[a]`;
+    audioFilter = `[${fallbackIndex}:a]${fmt},volume=1.0,apad[a]`;
   }
 
   const videoArgs = p.bitrate ? ['-b:v', p.bitrate] : ['-crf', '23'];
@@ -424,6 +457,17 @@ function videoExt(format?: string): string {
   if (/webm/i.test(f)) return 'webm';
   if (/quicktime|mov/i.test(f)) return 'mov';
   return 'mp4';
+}
+
+/** 根据 MIME 类型推断音频扩展名 */
+function audioExt(format?: string): string {
+  const f = format || '';
+  if (/mpeg|mp3/i.test(f)) return 'mp3';
+  if (/ogg|opus/i.test(f)) return 'ogg';
+  if (/flac/i.test(f)) return 'flac';
+  if (/wav|x-wav/i.test(f)) return 'wav';
+  if (/m4a|mp4|aac/i.test(f)) return 'm4a';
+  return 'mp3';
 }
 
 /** 探测音频/视频文件时长（秒），失败返回 0 */

@@ -1,5 +1,5 @@
 import { generateId, loadModuleData, loadProjects, loadProjectFile } from './storage';
-import type { Character, DubbingLine, Episode, Project, Shot, SynthesisConfig } from './types';
+import type { BgmItem, Character, DubbingLine, Episode, Project, Shot, SynthesisConfig } from './types';
 
 export interface ProjectFileEntry {
   /** 相对 fileId（不含项目前缀），导入时写入新项目即可复用 */
@@ -19,8 +19,10 @@ export interface ProjectBundle {
     characters: Character[];
     dubbing: DubbingLine[];
     synthesis: SynthesisConfig | null;
+    /** BGM 素材库清单（v3 新增；文件本体在 files 中） */
+    bgmLibrary?: BgmItem[];
   };
-  /** 项目内引用的本地文件（分镜图/角色图/配音音频），视频文件暂不打包避免备份过大 */
+  /** 项目内引用的本地文件（分镜图/角色图/配音音频/BGM），视频文件暂不打包避免备份过大 */
   files: ProjectFileEntry[];
 }
 
@@ -29,6 +31,7 @@ export interface ProjectModules {
   shots?: Shot[];
   characters?: Character[];
   dubbing?: DubbingLine[];
+  bgmLibrary?: BgmItem[];
 }
 
 /** 收集单个项目的完整数据（项目信息 + 全部模块 + 本地文件），用于导出备份 */
@@ -39,6 +42,8 @@ export async function collectProjectBundle(projectId: string): Promise<ProjectBu
   const shots = loadModuleData<Shot[]>(projectId, 'shots', []);
   const characters = loadModuleData<Character[]>(projectId, 'characters', []);
   const dubbing = loadModuleData<DubbingLine[]>(projectId, 'dubbing', []);
+  const bgmLibrary = loadModuleData<BgmItem[]>(projectId, 'bgmLibrary', []);
+  const synthesis = loadSynthesisConfig(projectId);
 
   // 收集模块中所有 db:// 引用（视频文件不打包，避免备份体积过大）
   const fileIds = new Set<string>();
@@ -51,6 +56,8 @@ export async function collectProjectBundle(projectId: string): Promise<ProjectBu
     for (const r of c.referenceImages ?? []) collectRef(r);
   }
   for (const d of dubbing) collectRef(d.audioUrl);
+  if (synthesis?.bgmFileId) collectRef(`db://${synthesis.bgmFileId}`);
+  for (const b of bgmLibrary) collectRef(`db://${b.fileId}`);
 
   const files: ProjectFileEntry[] = [];
   for (const fileId of fileIds) {
@@ -74,7 +81,8 @@ export async function collectProjectBundle(projectId: string): Promise<ProjectBu
       shots,
       characters,
       dubbing,
-      synthesis: loadSynthesisConfig(projectId),
+      synthesis,
+      bgmLibrary,
     },
     files,
   };
@@ -112,6 +120,7 @@ export function rebuildProjectFromBundle(
       shots: remap(bundle.modules.shots ?? []),
       characters: remap(bundle.modules.characters ?? []),
       dubbing: remap(bundle.modules.dubbing ?? []),
+      bgmLibrary: Array.isArray(bundle.modules.bgmLibrary) ? bundle.modules.bgmLibrary : [],
     },
     files: Array.isArray(bundle.files) ? bundle.files : [],
   };

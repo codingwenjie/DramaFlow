@@ -14,6 +14,10 @@ declare global {
       openFile: (
         filters?: { name: string; extensions: string[] }[]
       ) => Promise<{ name: string; content: string } | null>;
+      /** 打开二进制文件（BGM 等音频素材导入，返回 base64） */
+      openBinaryFile: (
+        filters?: { name: string; extensions: string[] }[]
+      ) => Promise<{ name: string; base64: string } | null>;
       onSynthesisProgress: (callback: (progress: SynthesisProgress) => void) => () => void;
     };
   }

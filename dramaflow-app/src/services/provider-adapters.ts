@@ -169,6 +169,10 @@ const dashscopeTTSAdapter: TTSAdapter = {
           voice,
           format: 'wav',
           sample_rate: 24000,
+          // 语速：CosyVoice SpeechSynthesizer 的 rate 参数（0.5~2）
+          ...((opts.speed ?? 1) !== 1
+            ? { rate: Math.min(2, Math.max(0.5, opts.speed!)) }
+            : {}),
           ...(instruction ? { instruction } : {}),
         }
       : {

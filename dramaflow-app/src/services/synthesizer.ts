@@ -80,6 +80,19 @@ export async function buildSynthesisJob(
     });
   }
 
+  // 背景音乐素材：开启 BGM 且选了素材时读出，交给主进程混音（无素材时不混）
+  let bgm: SynthesisJobInput['bgm'];
+  if (config.postProcessing.bgm && config.bgmFileId) {
+    const audio = await resolveFileBase64(projectId, `db://${config.bgmFileId}`);
+    if (audio) {
+      bgm = {
+        base64: audio.base64,
+        format: audio.format,
+        volume: Math.min(1.5, Math.max(0.05, (config.bgmVolume ?? 30) / 100)),
+      };
+    }
+  }
+
   const job: SynthesisJobInput = {
     projectId,
     projectName,
@@ -89,6 +102,7 @@ export async function buildSynthesisJob(
     width,
     height,
     bitrate: parseBitrate(config.bitrate),
+    ...(bgm ? { bgm } : {}),
     postProcessing: {
       colorGrading: config.postProcessing.colorGrading,
       bgm: config.postProcessing.bgm,

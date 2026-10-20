@@ -11,10 +11,19 @@ import { AIModelConfig, AIModelPurpose } from '../data/types';
 import { requestAIJSON, normalizeError } from './ai-http';
 import { getImageAdapter, getTTSAdapter } from './provider-adapters';
 import { testVideoConnection } from './video-generation';
+import { getActivePrompt, DEFAULT_SYSTEM_PROMPTS } from '../data/prompt-library';
 
 interface ChatMessage {
   role: 'system' | 'user';
   content: string;
+}
+
+/**
+ * 取某用途生效的系统提示词：优先使用 Prompt 库中启用的模板
+ * （用户在「Prompt & Skill」页配置），否则回退内置默认。
+ */
+function systemPromptFor(purpose: AIModelPurpose): string {
+  return getActivePrompt(purpose)?.content ?? DEFAULT_SYSTEM_PROMPTS[purpose] ?? '';
 }
 
 const CHAT_PURPOSES = ['script', 'polish', 'storyboard', 'character', 'suggestion', 'generic'];
@@ -173,10 +182,7 @@ export function createOpenAIService(config: AIModelConfig, purpose: AIModelPurpo
     generateScript: async (_params: AIGenerateScriptParams): Promise<string> => {
       return chatCompletion(
         config,
-        '你是一位资深短剧编剧，擅长创作节奏紧凑、冲突强烈的短剧剧本。' +
-          '你必须严格按照以下结构化格式输出每一幕，不要输出多余的解释：\n' +
-          '### 第N幕 ｜ 场景：内景/外景·地点·时间 ｜ 人物：角色A、角色B\n\n' +
-          '【场景描述】\n（场景与动作描写）\n\n角色A：（情绪）台词\n角色B：台词',
+        systemPromptFor('script'),
         `请根据以下要求生成短剧剧本：\n` +
           `提示：${_params.prompt}\n` +
           `题材：${_params.genre || '不限'}\n` +
@@ -189,9 +195,7 @@ export function createOpenAIService(config: AIModelConfig, purpose: AIModelPurpo
     generateShots: async (_params: AIGenerateShotsParams): Promise<string[]> => {
       const text = await chatCompletion(
         config,
-        '你是一位专业分镜师，擅长将剧本转化为具体的镜头语言描述。' +
-          '你必须严格按照以下格式每行输出一个镜头，不要输出序号、编号或任何解释：\n' +
-          '镜头类型|拍摄角度|时长秒|镜头描述|视频提示词|配乐风格|音效',
+        systemPromptFor('storyboard'),
         `请根据以下剧本内容，为「${_params.scene}」场景拆分镜头。\n` +
           `每行一个镜头，格式示例：全景|平视|3.5|咖啡馆全景，阳光透过玻璃，林晓端着咖啡走向镜头|镜头缓慢推近林晓，0-3秒她抬头望向门口，3-6秒陈诺推门走入，林晓神情意外|轻钢琴，氛围舒缓|门铃声、脚步声\n` +
           `字段要求：视频提示词写动态画面与运镜，用「0-3秒」「3-6秒」等分段描述动作变化；配乐风格一句话；音效简短列出关键词。\n` +
@@ -212,10 +216,7 @@ export function createOpenAIService(config: AIModelConfig, purpose: AIModelPurpo
     generateCharacter: async (_params: AIGenerateCharacterParams): Promise<string> => {
       const raw = await chatCompletion(
         config,
-        '你是一位人物设定专家，擅长为短剧角色创作立体丰满的人设。' +
-          '输出请使用简洁的 Markdown 格式：' +
-          '「## 角色定位」「## 性格特征」（要点列表）、「## 背景故事」「## 人物弧光」。' +
-          '严禁输出开场白（如“好的”“以下是…”）和结尾客套（如“以上就是”“希望有帮助”）以及任何与人物无关的解释。',
+        systemPromptFor('character'),
         `请为短剧角色「${_params.name}」创作人设。角色定位：${_params.role}。题材：${_params.genre || '现代都市'}。\n` +
           '格式要求：使用 Markdown 标题与列表，直接输出人设正文，不要输出任何开头和结尾的多余内容。'
       );
@@ -225,7 +226,7 @@ export function createOpenAIService(config: AIModelConfig, purpose: AIModelPurpo
     generateSuggestions: async (_params: AIGenerateSuggestionParams): Promise<string[]> => {
       const text = await chatCompletion(
         config,
-        '你是一位短剧创作顾问，擅长给出具体、可执行的改进建议。',
+        systemPromptFor('suggestion'),
         `请针对以下${_params.type === 'script' ? '剧本' : _params.type === 'character' ? '角色' : '分镜'}内容给出 3-5 条优化建议：\n\n${_params.context}`
       );
       return text.split('\n').map((line) => line.replace(/^[-\d.\s]+/, '')).filter(Boolean);
@@ -234,7 +235,7 @@ export function createOpenAIService(config: AIModelConfig, purpose: AIModelPurpo
     polishScript: async (content: string, _instruction?: string): Promise<string> => {
       return chatCompletion(
         config,
-        '你是一位资深剧本编辑，擅长优化台词节奏、增强戏剧冲突。',
+        systemPromptFor('polish'),
         `请根据以下要求润色剧本：${_instruction || '优化表达，增强戏剧张力'}\n\n${content}`
       );
     },

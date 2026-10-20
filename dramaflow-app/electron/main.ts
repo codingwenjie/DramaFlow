@@ -249,6 +249,28 @@ app.whenReady().then(() => {
     }
   )
 
+  // 打开二进制文件（BGM 等音频素材导入），返回 base64
+  ipcMain.handle(
+    'file:open-binary',
+    async (event, filters?: { name: string; extensions: string[] }[]) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      const options: Electron.OpenDialogOptions = {
+        title: '选择文件',
+        filters: filters?.length ? filters : undefined,
+        properties: ['openFile'],
+      }
+      const { canceled, filePaths } = win
+        ? await dialog.showOpenDialog(win, options)
+        : await dialog.showOpenDialog(options)
+      if (canceled || !filePaths?.[0]) return null
+      const filePath = filePaths[0]
+      return {
+        name: path.basename(filePath),
+        base64: fs.readFileSync(filePath).toString('base64'),
+      }
+    }
+  )
+
   createAppMenu()
   createWindow()
   // 应用启动后 5 秒检查更新
